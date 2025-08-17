@@ -9,6 +9,7 @@ import { SecurityService } from './services/security-service.js';
 import { EquityService } from './services/equity-service.js';
 import { ReportingService } from './services/reporting-service.js';
 import { AuditService } from './services/audit-service.js';
+import { SAFEService } from './services/safe-service.js';
 import {
   runInitWizard,
   parseFounderString,
@@ -76,6 +77,7 @@ program
         securityClasses: [],
         issuances: [],
         optionGrants: [],
+        safes: [],
         valuations: [],
         audit: [],
       };
@@ -361,6 +363,151 @@ program
       console.error(`❌ ${error.message}`);
       process.exit(1);
     }
+  });
+
+program
+  .command('safe')
+  .description('Add a SAFE (Simple Agreement for Future Equity)')
+  .requiredOption('-h, --holder <stakeholderId>', 'stakeholder ID')
+  .requiredOption('-a, --amount <amount>', 'investment amount')
+  .option('-c, --cap <cap>', 'valuation cap')
+  .option('-d, --discount <discount>', 'discount rate (e.g., 0.8 for 20% discount)')
+  .option('-t, --type <type>', 'pre or post money SAFE', 'pre')
+  .option('-n, --note <note>', 'note or description')
+  .option('--date <date>', 'SAFE date', new Date().toISOString().slice(0, 10))
+  .action((opts) => {
+    const model = load();
+    const safeService = new SAFEService(model);
+    const auditService = new AuditService(model);
+    const stakeholderService = new StakeholderService(model);
+
+    try {
+      const safe = safeService.addSAFE({
+        stakeholderId: opts.holder,
+        amount: Number(opts.amount),
+        cap: opts.cap ? Number(opts.cap) : undefined,
+        discount: opts.discount ? Number(opts.discount) : undefined,
+        type: opts.type as 'pre' | 'post' | undefined,
+        note: opts.note,
+        date: opts.date,
+      });
+
+      const stakeholder = stakeholderService.getStakeholder(opts.holder);
+
+      auditService.logAction('SAFE_ADD', {
+        id: safe.id,
+        stakeholderId: opts.holder,
+        amount: Number(opts.amount),
+        cap: opts.cap,
+        discount: opts.discount,
+        type: opts.type,
+        date: opts.date,
+      });
+
+      save(model);
+      
+      const currency = model.company.currency || 'USD';
+      console.log(`💰 Added SAFE for ${stakeholder?.name}`);
+      console.log(`   Amount: ${currency} ${safe.amount.toLocaleString()}`);
+      if (safe.cap) console.log(`   Cap: ${currency} ${safe.cap.toLocaleString()}`);
+      if (safe.discount) console.log(`   Discount: ${Math.round((1 - safe.discount) * 100)}%`);
+    } catch (error: any) {
+      console.error(`❌ ${error.message}`);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('safes')
+  .description('List all SAFEs')
+  .option('-f, --format <format>', 'output format (text|json)', 'text')
+  .action((opts) => {
+    const model = load();
+    const safeService = new SAFEService(model);
+    const currency = model.company.currency || 'USD';
+
+    if (opts.format === 'json') {
+      const summary = safeService.getSAFEsSummary();
+      console.log(JSON.stringify(summary, null, 2));
+    } else {
+      const summary = safeService.getSAFEsSummary();
+      
+      if (summary.count === 0) {
+        console.log('No SAFEs found');
+        return;
+      }
+
+      console.log('\nSAFEs Outstanding');
+      console.log('=================');
+      
+      for (const holder of summary.byStakeholder) {
+        for (const safe of holder.safes) {
+          const capStr = safe.cap ? `Cap: ${currency} ${safe.cap.toLocaleString()}` : '';
+          const discountStr = safe.discount ? `Discount: ${Math.round((1 - safe.discount) * 100)}%` : '';
+          const terms = [capStr, discountStr].filter(Boolean).join('  ');
+          
+          console.log(
+            `${holder.stakeholderName.padEnd(20)} ${currency} ${safe.amount
+              .toLocaleString()
+              .padStart(10)}  ${terms}  Date: ${safe.date}`
+          );
+        }
+      }
+      
+      console.log(`\nTotal: ${currency} ${summary.totalAmount.toLocaleString()}`);
+    }
+  });
+
+program
+  .command('convert')
+  .description('Simulate SAFE conversion at a priced round')
+  .requiredOption('--pre-money <valuation>', 'pre-money valuation')
+  .requiredOption('--new-money <amount>', 'new money raised')
+  .option('--pps <price>', 'price per share')
+  .action((opts) => {
+    const model = load();
+    const safeService = new SAFEService(model);
+    const currency = model.company.currency || 'USD';
+
+    const roundTerms = {
+      preMoneyValuation: Number(opts.preMoney),
+      newMoneyRaised: Number(opts.newMoney),
+      pricePerShare: opts.pps ? Number(opts.pps) : undefined,
+    };
+    
+    const conversions = safeService.simulateConversion(roundTerms);
+
+    if (conversions.length === 0) {
+      console.log('No SAFEs to convert');
+      return;
+    }
+
+    // Calculate or use provided price per share
+    const currentShares = model.issuances.reduce((sum, i) => sum + i.qty, 0);
+    const pps = roundTerms.pricePerShare || roundTerms.preMoneyValuation / currentShares;
+    
+    console.log('\nSAFE Conversion Simulation');
+    console.log('==========================');
+    console.log(`Round Terms: ${currency} ${Number(opts.preMoney).toLocaleString()} pre-money`);
+    console.log(`             ${currency} ${Number(opts.newMoney).toLocaleString()} new money`);
+    console.log(`             ${currency} ${pps.toFixed(2)}/share\n`);
+
+    let totalShares = 0;
+    for (const conv of conversions) {
+      const reasonStr = 
+        conv.conversionReason === 'cap' ? '(cap price)' :
+        conv.conversionReason === 'discount' ? '(discount price)' :
+        '(round price)';
+      
+      console.log(
+        `${conv.stakeholderName.padEnd(20)} ${currency} ${conv.investmentAmount
+          .toLocaleString()
+          .padStart(10)} → ${conv.sharesIssued.toLocaleString().padStart(10)} shares @ ${currency}${conv.conversionPrice.toFixed(2)} ${reasonStr}`
+      );
+      totalShares += conv.sharesIssued;
+    }
+    
+    console.log(`\nTotal SAFE conversion: ${totalShares.toLocaleString()} shares`);
   });
 
 program

@@ -201,6 +201,7 @@ export function buildModelFromWizard(result: WizardResult): FileModel {
     securityClasses: [],
     issuances: [],
     optionGrants: [],
+    safes: [],
     valuations: [],
     audit: [],
   };

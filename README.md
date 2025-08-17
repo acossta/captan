@@ -72,6 +72,27 @@ captan init --wizard
 # - Founder equity splits
 ```
 
+### 💰 SAFE Support
+
+```bash
+# Add a SAFE investment
+captan safe \
+  --holder sh_alice \
+  --amount 100000 \
+  --cap 5000000 \
+  --discount 0.8 \
+  --note "YC SAFE"
+
+# List all SAFEs
+captan safes
+
+# Simulate SAFE conversion at Series A
+captan convert \
+  --pre-money 10000000 \
+  --new-money 3000000 \
+  --pps 2.00
+```
+
 ### 📊 Sample Output
 ```yaml
 📊 Captan — Cap Table (as of 2025-08-16)
@@ -95,7 +116,8 @@ Fully diluted total: 7000000
 - **Security classes** (common, preferred, option pools)
 - **Share issuances**
 - **Option grants & vesting schedules**
-- **Cap table reports** (outstanding & FD)
+- **SAFE investments** (with cap, discount, conversion simulation)
+- **Cap table reports** (outstanding & FD, with SAFEs)
 - **Export CSV/JSON**
 - **Audit history** (the "ship's log")
 
@@ -107,6 +129,9 @@ Fully diluted total: 7000000
 - `captan security:add` - Add a security class (COMMON, PREF, or OPTION_POOL)
 - `captan issue` - Issue shares to a stakeholder
 - `captan grant` - Grant options with vesting schedules
+- `captan safe` - Add a SAFE investment
+- `captan safes` - List all SAFEs
+- `captan convert` - Simulate SAFE conversion at a priced round
 
 ### Reporting Commands
 - `captan chart` - Display cap table with ownership percentages

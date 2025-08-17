@@ -56,6 +56,19 @@ export const OptionGrantSchema = z.object({
 
 export type OptionGrant = z.infer<typeof OptionGrantSchema>;
 
+export const SAFESchema = z.object({
+  id: z.string(),
+  stakeholderId: z.string(),
+  amount: z.number().positive(),
+  date: z.string(),
+  cap: z.number().positive().optional(),
+  discount: z.number().min(0).max(1).optional(),
+  type: z.enum(['pre', 'post']).optional(),
+  note: z.string().optional(),
+});
+
+export type SAFE = z.infer<typeof SAFESchema>;
+
 export const AuditEntrySchema = z.object({
   ts: z.string(),
   by: z.string(),
@@ -79,6 +92,7 @@ export const FileModelSchema = z.object({
   securityClasses: z.array(SecurityClassSchema),
   issuances: z.array(IssuanceSchema),
   optionGrants: z.array(OptionGrantSchema),
+  safes: z.array(SAFESchema),
   valuations: z.array(z.any()),
   audit: z.array(AuditEntrySchema),
 });
@@ -156,6 +170,65 @@ export function getEntityDefaults(entityType: EntityType) {
         poolPct: 0,
       };
   }
+}
+
+export interface SAFEConversion {
+  safeId: string;
+  stakeholderId: string;
+  stakeholderName: string;
+  investmentAmount: number;
+  sharesIssued: number;
+  conversionPrice: number;
+  conversionReason: 'cap' | 'discount' | 'price';
+}
+
+export function convertSAFE(
+  safe: SAFE,
+  pricePerShare: number,
+  preMoneyShares: number,
+  isPostMoney = false
+): SAFEConversion {
+  // Calculate discount price if applicable
+  const discountPrice = safe.discount ? pricePerShare * safe.discount : pricePerShare;
+  
+  // Calculate cap price if applicable
+  let capPrice = pricePerShare;
+  if (safe.cap) {
+    if (isPostMoney || safe.type === 'post') {
+      // Post-money SAFE: cap divided by company capitalization INCLUDING the SAFE
+      // This is more complex and typically requires iterative calculation
+      // For simplicity, we'll use an approximation
+      capPrice = safe.cap / (preMoneyShares + Math.floor(safe.amount / pricePerShare));
+    } else {
+      // Pre-money SAFE: cap divided by company capitalization EXCLUDING the SAFE
+      capPrice = safe.cap / preMoneyShares;
+    }
+  }
+  
+  // Determine effective conversion price and reason
+  let effectivePrice = pricePerShare;
+  let reason: 'cap' | 'discount' | 'price' = 'price';
+  
+  if (capPrice < effectivePrice) {
+    effectivePrice = capPrice;
+    reason = 'cap';
+  }
+  if (discountPrice < effectivePrice) {
+    effectivePrice = discountPrice;
+    reason = 'discount';
+  }
+  
+  const sharesIssued = Math.floor(safe.amount / effectivePrice);
+  
+  return {
+    safeId: safe.id,
+    stakeholderId: safe.stakeholderId,
+    stakeholderName: '', // Will be filled by service
+    investmentAmount: safe.amount,
+    sharesIssued,
+    conversionPrice: effectivePrice,
+    conversionReason: reason,
+  };
 }
 
 export function calcCap(model: FileModel, asOfISO: string): CapTableResult {

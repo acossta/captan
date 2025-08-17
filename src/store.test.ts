@@ -14,6 +14,7 @@ describe('store', () => {
     securityClasses: [],
     issuances: [],
     optionGrants: [],
+    safes: [],
     valuations: [],
     audit: [],
   };

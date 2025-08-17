@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { monthsBetween, vestedQty, calcCap, FileModel, Vesting } from './model.js';
+import { monthsBetween, vestedQty, calcCap, FileModel, Vesting, convertSAFE, SAFE } from './model.js';
 
 describe('monthsBetween', () => {
   it('should calculate months between two dates', () => {
@@ -116,6 +116,7 @@ describe('calcCap', () => {
         vesting: { start: '2024-01-01', monthsTotal: 48, cliffMonths: 12 },
       },
     ],
+    safes: [],
     valuations: [],
     audit: [],
   });
@@ -178,6 +179,7 @@ describe('calcCap', () => {
       securityClasses: [],
       issuances: [],
       optionGrants: [],
+      safes: [],
       valuations: [],
       audit: [],
     };
@@ -207,5 +209,94 @@ describe('calcCap', () => {
     expect(result.rows[0].name).toBe('Alice');
     expect(result.rows[1].name).toBe('Charlie');
     expect(result.rows[2].name).toBe('Bob');
+  });
+});
+
+describe('convertSAFE', () => {
+  const baseSAFE: SAFE = {
+    id: 'safe_123',
+    stakeholderId: 'sh_alice',
+    amount: 100000,
+    date: '2024-01-01',
+  };
+
+  it('should convert at round price when no cap or discount', () => {
+    const result = convertSAFE(baseSAFE, 2.0, 5000000);
+    
+    expect(result.sharesIssued).toBe(50000); // 100k / 2.0
+    expect(result.conversionPrice).toBe(2.0);
+    expect(result.conversionReason).toBe('price');
+  });
+
+  it('should apply discount when present', () => {
+    const safe: SAFE = { ...baseSAFE, discount: 0.8 }; // 20% discount
+    const result = convertSAFE(safe, 2.0, 5000000);
+    
+    expect(result.conversionPrice).toBe(1.6); // 2.0 * 0.8
+    expect(result.sharesIssued).toBe(62500); // 100k / 1.6
+    expect(result.conversionReason).toBe('discount');
+  });
+
+  it('should apply cap when better than price', () => {
+    const safe: SAFE = { ...baseSAFE, cap: 4000000 };
+    const result = convertSAFE(safe, 2.0, 5000000);
+    
+    expect(result.conversionPrice).toBe(0.8); // 4M / 5M shares
+    expect(result.sharesIssued).toBe(125000); // 100k / 0.8
+    expect(result.conversionReason).toBe('cap');
+  });
+
+  it('should use the lowest price between cap and discount', () => {
+    const safe: SAFE = { 
+      ...baseSAFE, 
+      cap: 4000000,  // Cap price: 4M/5M = 0.8
+      discount: 0.5  // Discount price: 2.0 * 0.5 = 1.0
+    };
+    const result = convertSAFE(safe, 2.0, 5000000);
+    
+    expect(result.conversionPrice).toBe(0.8); // Cap is better
+    expect(result.sharesIssued).toBe(125000);
+    expect(result.conversionReason).toBe('cap');
+  });
+
+  it('should prefer discount when better than cap', () => {
+    const safe: SAFE = { 
+      ...baseSAFE, 
+      cap: 8000000,  // Cap price: 8M/5M = 1.6
+      discount: 0.6  // Discount price: 2.0 * 0.6 = 1.2
+    };
+    const result = convertSAFE(safe, 2.0, 5000000);
+    
+    expect(result.conversionPrice).toBe(1.2); // Discount is better
+    expect(result.sharesIssued).toBe(83333); // 100k / 1.2
+    expect(result.conversionReason).toBe('discount');
+  });
+
+  it('should handle post-money SAFE', () => {
+    const safe: SAFE = { 
+      ...baseSAFE, 
+      cap: 5050000,
+      type: 'post'
+    };
+    
+    // Post-money: cap / (existing shares + new shares from SAFE)
+    // Approximation: 5.05M / (5M + 50k) ≈ 1.0
+    const result = convertSAFE(safe, 2.0, 5000000, true);
+    
+    expect(result.conversionPrice).toBeLessThan(2.0);
+    expect(result.conversionReason).toBe('cap');
+  });
+
+  it('should handle large investment amounts', () => {
+    const safe: SAFE = { 
+      ...baseSAFE, 
+      amount: 1000000,
+      cap: 10000000
+    };
+    const result = convertSAFE(safe, 3.0, 5000000);
+    
+    expect(result.conversionPrice).toBe(2.0); // 10M / 5M
+    expect(result.sharesIssued).toBe(500000); // 1M / 2.0
+    expect(result.conversionReason).toBe('cap');
   });
 });
