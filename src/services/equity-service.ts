@@ -1,5 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import { FileModel, Issuance, IssuanceSchema, OptionGrant, OptionGrantSchema, Vesting } from '../model.js';
+import {
+  FileModel,
+  Issuance,
+  IssuanceSchema,
+  OptionGrant,
+  OptionGrantSchema,
+  Vesting,
+} from '../model.js';
 import { StakeholderService } from './stakeholder-service.js';
 import { SecurityService } from './security-service.js';
 
@@ -42,7 +49,7 @@ export class EquityService {
       qty,
       pps,
       date,
-      cert
+      cert,
     };
 
     const validated = IssuanceSchema.parse(issuance);
@@ -72,7 +79,7 @@ export class EquityService {
       qty,
       exercise,
       grantDate,
-      vesting
+      vesting,
     };
 
     const validated = OptionGrantSchema.parse(grant);
@@ -81,15 +88,15 @@ export class EquityService {
   }
 
   getIssuancesByStakeholder(stakeholderId: string): Issuance[] {
-    return this.model.issuances.filter(i => i.stakeholderId === stakeholderId);
+    return this.model.issuances.filter((i) => i.stakeholderId === stakeholderId);
   }
 
   getGrantsByStakeholder(stakeholderId: string): OptionGrant[] {
-    return this.model.optionGrants.filter(g => g.stakeholderId === stakeholderId);
+    return this.model.optionGrants.filter((g) => g.stakeholderId === stakeholderId);
   }
 
   getIssuancesBySecurityClass(securityClassId: string): Issuance[] {
-    return this.model.issuances.filter(i => i.securityClassId === securityClassId);
+    return this.model.issuances.filter((i) => i.securityClassId === securityClassId);
   }
 
   transferShares(
@@ -97,7 +104,7 @@ export class EquityService {
     toStakeholderId: string,
     qty?: number
   ): { from: Issuance; to: Issuance } {
-    const issuanceIndex = this.model.issuances.findIndex(i => i.id === issuanceId);
+    const issuanceIndex = this.model.issuances.findIndex((i) => i.id === issuanceId);
     if (issuanceIndex === -1) {
       throw new Error(`Issuance with ID "${issuanceId}" not found`);
     }
@@ -108,7 +115,9 @@ export class EquityService {
     const transferQty = qty ?? issuance.qty;
 
     if (transferQty > issuance.qty) {
-      throw new Error(`Cannot transfer ${transferQty} shares - issuance only has ${issuance.qty} shares`);
+      throw new Error(
+        `Cannot transfer ${transferQty} shares - issuance only has ${issuance.qty} shares`
+      );
     }
 
     if (transferQty === issuance.qty) {
@@ -117,7 +126,7 @@ export class EquityService {
     }
 
     issuance.qty -= transferQty;
-    
+
     const newIssuance: Issuance = {
       id: `is_${randomUUID()}`,
       securityClassId: issuance.securityClassId,
@@ -125,17 +134,17 @@ export class EquityService {
       qty: transferQty,
       pps: issuance.pps,
       date: new Date().toISOString().slice(0, 10),
-      cert: undefined
+      cert: undefined,
     };
 
     const validated = IssuanceSchema.parse(newIssuance);
     this.model.issuances.push(validated);
-    
+
     return { from: issuance, to: validated };
   }
 
   cancelIssuance(issuanceId: string): void {
-    const index = this.model.issuances.findIndex(i => i.id === issuanceId);
+    const index = this.model.issuances.findIndex((i) => i.id === issuanceId);
     if (index === -1) {
       throw new Error(`Issuance with ID "${issuanceId}" not found`);
     }
@@ -144,7 +153,7 @@ export class EquityService {
   }
 
   cancelGrant(grantId: string): void {
-    const index = this.model.optionGrants.findIndex(g => g.id === grantId);
+    const index = this.model.optionGrants.findIndex((g) => g.id === grantId);
     if (index === -1) {
       throw new Error(`Grant with ID "${grantId}" not found`);
     }
@@ -157,13 +166,13 @@ export class EquityService {
     qty: number,
     exerciseDate: string = new Date().toISOString().slice(0, 10)
   ): Issuance {
-    const grantIndex = this.model.optionGrants.findIndex(g => g.id === grantId);
+    const grantIndex = this.model.optionGrants.findIndex((g) => g.id === grantId);
     if (grantIndex === -1) {
       throw new Error(`Grant with ID "${grantId}" not found`);
     }
 
     const grant = this.model.optionGrants[grantIndex];
-    
+
     if (qty > grant.qty) {
       throw new Error(`Cannot exercise ${qty} options - grant only has ${grant.qty} options`);
     }
@@ -174,7 +183,7 @@ export class EquityService {
     }
 
     const commonClass = commonClasses[0];
-    
+
     const issuance = this.issueShares(
       commonClass.id,
       grant.stakeholderId,

@@ -15,12 +15,12 @@ export class SecurityService {
       kind,
       label,
       authorized,
-      parValue
+      parValue,
     };
 
     const validated = SecurityClassSchema.parse(securityClass);
-    
-    if (this.model.securityClasses.some(sc => sc.label === label)) {
+
+    if (this.model.securityClasses.some((sc) => sc.label === label)) {
       throw new Error(`Security class "${label}" already exists`);
     }
 
@@ -29,11 +29,11 @@ export class SecurityService {
   }
 
   getSecurityClass(id: string): SecurityClass | undefined {
-    return this.model.securityClasses.find(sc => sc.id === id);
+    return this.model.securityClasses.find((sc) => sc.id === id);
   }
 
   getSecurityClassByLabel(label: string): SecurityClass | undefined {
-    return this.model.securityClasses.find(sc => sc.label === label);
+    return this.model.securityClasses.find((sc) => sc.label === label);
   }
 
   listSecurityClasses(): SecurityClass[] {
@@ -41,7 +41,7 @@ export class SecurityService {
   }
 
   listByKind(kind: Kind): SecurityClass[] {
-    return this.model.securityClasses.filter(sc => sc.kind === kind);
+    return this.model.securityClasses.filter((sc) => sc.kind === kind);
   }
 
   validateSecurityClassExists(id: string): void {
@@ -55,9 +55,9 @@ export class SecurityService {
     granted: number;
     remaining: number;
   } {
-    const pools = poolId 
-      ? this.model.securityClasses.filter(sc => sc.id === poolId && sc.kind === 'OPTION_POOL')
-      : this.model.securityClasses.filter(sc => sc.kind === 'OPTION_POOL');
+    const pools = poolId
+      ? this.model.securityClasses.filter((sc) => sc.id === poolId && sc.kind === 'OPTION_POOL')
+      : this.model.securityClasses.filter((sc) => sc.kind === 'OPTION_POOL');
 
     if (poolId && pools.length === 0) {
       throw new Error(`Option pool with ID "${poolId}" not found`);
@@ -72,7 +72,7 @@ export class SecurityService {
 
   getIssuedByClass(securityClassId: string): number {
     return this.model.issuances
-      .filter(i => i.securityClassId === securityClassId)
+      .filter((i) => i.securityClassId === securityClassId)
       .reduce((sum, i) => sum + i.qty, 0);
   }
 
@@ -92,13 +92,13 @@ export class SecurityService {
   }
 
   updateAuthorized(id: string, newAuthorized: number): SecurityClass {
-    const index = this.model.securityClasses.findIndex(sc => sc.id === id);
+    const index = this.model.securityClasses.findIndex((sc) => sc.id === id);
     if (index === -1) {
       throw new Error(`Security class with ID "${id}" not found`);
     }
 
     const sc = this.model.securityClasses[index];
-    
+
     if (sc.kind === 'OPTION_POOL') {
       const pool = this.validatePoolCapacity(id);
       if (newAuthorized < pool.granted) {
@@ -120,8 +120,8 @@ export class SecurityService {
   }
 
   removeSecurityClass(id: string): void {
-    const hasIssuances = this.model.issuances.some(i => i.securityClassId === id);
-    
+    const hasIssuances = this.model.issuances.some((i) => i.securityClassId === id);
+
     if (hasIssuances) {
       throw new Error(`Cannot remove security class "${id}" - has existing issuances`);
     }
@@ -134,7 +134,7 @@ export class SecurityService {
       }
     }
 
-    const index = this.model.securityClasses.findIndex(sc => sc.id === id);
+    const index = this.model.securityClasses.findIndex((sc) => sc.id === id);
     if (index === -1) {
       throw new Error(`Security class with ID "${id}" not found`);
     }

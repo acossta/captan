@@ -6,10 +6,10 @@ export function load(file = 'captable.json'): FileModel {
   if (!fs.existsSync(file)) {
     throw new Error(`File not found: ${file}. Run 'captan init' to create a new cap table.`);
   }
-  
+
   const content = fs.readFileSync(file, 'utf8');
   const data = JSON.parse(content);
-  
+
   return FileModelSchema.parse(data);
 }
 
@@ -23,9 +23,9 @@ export function audit(model: FileModel, action: string, data: any, by = 'cli'): 
     ts: new Date().toISOString(),
     by,
     action,
-    data
+    data,
   };
-  
+
   model.audit.push(entry);
 }
 

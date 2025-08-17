@@ -35,7 +35,7 @@ program
       company: {
         id: `comp_${randomUUID()}`,
         name: opts.name,
-        formationDate: new Date().toISOString().slice(0, 10)
+        formationDate: new Date().toISOString().slice(0, 10),
       },
       stakeholders: [],
       securityClasses: [
@@ -44,24 +44,24 @@ program
           kind: 'COMMON',
           label: 'Common Stock',
           authorized: 10000000,
-          parValue: 0.0001
+          parValue: 0.0001,
         },
         {
           id: 'sc_pool',
           kind: 'OPTION_POOL',
           label: '2024 Stock Option Plan',
-          authorized: Number(opts.pool)
-        }
+          authorized: Number(opts.pool),
+        },
       ],
       issuances: [],
       optionGrants: [],
       valuations: [],
-      audit: []
+      audit: [],
     };
 
     const auditService = new AuditService(model);
     auditService.logAction('INIT', { name: opts.name, pool: Number(opts.pool) });
-    
+
     save(model);
     console.log('✅ Created captable.json');
     console.log(`⚓ ${NAME}: ${TAGLINE}`);
@@ -84,18 +84,14 @@ enlist
     const auditService = new AuditService(model);
 
     try {
-      const stakeholder = stakeholderService.addStakeholder(
-        opts.name,
-        opts.type,
-        opts.email
-      );
-      
+      const stakeholder = stakeholderService.addStakeholder(opts.name, opts.type, opts.email);
+
       auditService.logAction('STAKEHOLDER_ADD', {
         id: stakeholder.id,
         name: stakeholder.name,
-        type: stakeholder.type
+        type: stakeholder.type,
       });
-      
+
       save(model);
       console.log(`👤 Enlisted stakeholder ${stakeholder.name} (${stakeholder.id})`);
     } catch (error: any) {
@@ -124,14 +120,14 @@ program
         Number(opts.authorized),
         opts.par ? Number(opts.par) : undefined
       );
-      
+
       auditService.logAction('SECURITY_ADD', {
         id: sc.id,
         kind: sc.kind,
         label: sc.label,
-        authorized: sc.authorized
+        authorized: sc.authorized,
       });
-      
+
       save(model);
       console.log(`🏷️  Added security class ${sc.label} (${sc.kind})`);
     } catch (error: any) {
@@ -165,21 +161,23 @@ program
         opts.date,
         opts.cert
       );
-      
+
       const stakeholder = stakeholderService.getStakeholder(opts.holder);
       const securityClass = securityService.getSecurityClass(opts.security);
-      
+
       auditService.logAction('ISSUE', {
         id: issuance.id,
         securityClassId: opts.security,
         stakeholderId: opts.holder,
         qty: Number(opts.qty),
         pps: Number(opts.pps),
-        date: opts.date
+        date: opts.date,
       });
-      
+
       save(model);
-      console.log(`🧾 Issued ${opts.qty} shares of ${securityClass?.label} to ${stakeholder?.name}`);
+      console.log(
+        `🧾 Issued ${opts.qty} shares of ${securityClass?.label} to ${stakeholder?.name}`
+      );
     } catch (error: any) {
       console.error(`❌ ${error.message}`);
       process.exit(1);
@@ -209,7 +207,7 @@ program
         vesting = {
           start: opts.start || opts.grantDate,
           monthsTotal: Number(opts.months),
-          cliffMonths: Number(opts.cliff)
+          cliffMonths: Number(opts.cliff),
         };
       }
 
@@ -220,22 +218,24 @@ program
         opts.grantDate,
         vesting
       );
-      
+
       const stakeholder = stakeholderService.getStakeholder(opts.holder);
-      
+
       auditService.logAction('GRANT', {
         id: grant.id,
         stakeholderId: opts.holder,
         qty: Number(opts.qty),
         exercise: Number(opts.exercise),
         grantDate: opts.grantDate,
-        vesting
+        vesting,
       });
-      
+
       save(model);
       console.log(`🪙  Granted ${opts.qty} options to ${stakeholder?.name}`);
       if (vesting) {
-        console.log(`   Vesting: ${vesting.monthsTotal} months with ${vesting.cliffMonths} month cliff`);
+        console.log(
+          `   Vesting: ${vesting.monthsTotal} months with ${vesting.cliffMonths} month cliff`
+        );
       }
     } catch (error: any) {
       console.error(`❌ ${error.message}`);
@@ -333,11 +333,11 @@ program
     const auditService = new AuditService(model);
 
     let entries = auditService.getAuditTrail();
-    
+
     if (opts.action) {
-      entries = entries.filter(e => e.action === opts.action);
+      entries = entries.filter((e) => e.action === opts.action);
     }
-    
+
     entries = entries.slice(-Number(opts.limit));
 
     if (opts.format === 'json') {
@@ -359,7 +359,7 @@ program
     if (type === 'stakeholders') {
       const stakeholderService = new StakeholderService(model);
       const stakeholders = stakeholderService.listStakeholders();
-      
+
       if (stakeholders.length === 0) {
         console.log('No stakeholders found');
       } else {
@@ -372,14 +372,16 @@ program
     } else if (type === 'securities') {
       const securityService = new SecurityService(model);
       const securities = securityService.listSecurityClasses();
-      
+
       if (securities.length === 0) {
         console.log('No security classes found');
       } else {
         console.log('\nSecurity Classes:');
         console.log('=================');
         for (const sc of securities) {
-          console.log(`${sc.id}: ${sc.label} (${sc.kind}) - ${sc.authorized.toLocaleString()} authorized`);
+          console.log(
+            `${sc.id}: ${sc.label} (${sc.kind}) - ${sc.authorized.toLocaleString()} authorized`
+          );
         }
       }
     } else {

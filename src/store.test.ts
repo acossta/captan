@@ -15,7 +15,7 @@ describe('store', () => {
     issuances: [],
     optionGrants: [],
     valuations: [],
-    audit: []
+    audit: [],
   };
 
   beforeEach(() => {
@@ -28,7 +28,7 @@ describe('store', () => {
       vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockModel));
 
       const result = load('test.json');
-      
+
       expect(fs.existsSync).toHaveBeenCalledWith('test.json');
       expect(fs.readFileSync).toHaveBeenCalledWith('test.json', 'utf8');
       expect(result).toEqual(mockModel);
@@ -47,22 +47,24 @@ describe('store', () => {
       vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockModel));
 
       load();
-      
+
       expect(fs.existsSync).toHaveBeenCalledWith('captable.json');
     });
 
     it('should validate data with Zod schema', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
-        version: 1,
-        company: { id: 'comp_1', name: 'Test' },
-        stakeholders: [{ id: 'sh_1', type: 'invalid', name: 'Alice' }],
-        securityClasses: [],
-        issuances: [],
-        optionGrants: [],
-        valuations: [],
-        audit: []
-      }));
+      vi.mocked(fs.readFileSync).mockReturnValue(
+        JSON.stringify({
+          version: 1,
+          company: { id: 'comp_1', name: 'Test' },
+          stakeholders: [{ id: 'sh_1', type: 'invalid', name: 'Alice' }],
+          securityClasses: [],
+          issuances: [],
+          optionGrants: [],
+          valuations: [],
+          audit: [],
+        })
+      );
 
       expect(() => load('invalid.json')).toThrow();
     });
@@ -87,10 +89,7 @@ describe('store', () => {
 
       save(mockModel);
 
-      expect(fs.writeFileSync).toHaveBeenCalledWith(
-        'captable.json',
-        expect.any(String)
-      );
+      expect(fs.writeFileSync).toHaveBeenCalledWith('captable.json', expect.any(String));
     });
 
     it('should ensure directory exists', () => {
@@ -115,7 +114,7 @@ describe('store', () => {
       expect(model.audit[0]).toMatchObject({
         action: 'TEST_ACTION',
         data,
-        by: 'cli'
+        by: 'cli',
       });
       expect(model.audit[0].ts).toBeDefined();
     });
@@ -136,10 +135,9 @@ describe('store', () => {
 
       ensureDirFor('nested/dir/file.json');
 
-      expect(fs.mkdirSync).toHaveBeenCalledWith(
-        expect.stringContaining('nested/dir'),
-        { recursive: true }
-      );
+      expect(fs.mkdirSync).toHaveBeenCalledWith(expect.stringContaining('nested/dir'), {
+        recursive: true,
+      });
     });
 
     it('should not create directory if it exists', () => {
