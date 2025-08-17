@@ -41,21 +41,35 @@ captan --help
 ### One-minute flow
 
 ```bash
-# 1. Init a new cap table
-captan init --name "Acme, Inc." --pool 2000000
+# 1. Initialize with founders and pool (C-Corp with 20% pool)
+captan init \
+  --name "Acme, Inc." \
+  --founder "Alice Founder:alice@acme.com:5000000" \
+  --founder "Bob Engineer:bob@acme.com:3000000" \
+  --pool-pct 20
 
-# 2. Add stakeholders
-captan enlist stakeholder --name "Alice Founder" --email alice@acme.com
-captan enlist stakeholder --name "Bob Eng"
+# 2. Grant options from the pool
+captan grant --holder sh_bob --qty 200000 --exercise 0.10
 
-# 3. Issue shares
-captan issue --security sc_common --holder sh_alice --qty 5000000 --pps 0.0001 --date 2024-01-02
+# 3. View your cap table
+captan chart
 
-# 4. Grant options
-captan grant --holder sh_bob --qty 200000 --exercise 0.10 --grant-date 2024-04-01 --start 2024-04-01
+# 4. Export to CSV
+captan export csv > captable.csv
+```
 
-# 5. View your cap table
-captan chart --date 2025-08-16
+### Interactive Setup
+
+```bash
+# Use the wizard for guided setup
+captan init --wizard
+
+# Prompts you through:
+# - Company name & type (C-Corp, S-Corp, LLC)
+# - State of incorporation
+# - Authorized shares/units
+# - Option pool configuration
+# - Founder equity splits
 ```
 
 ### 📊 Sample Output

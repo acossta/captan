@@ -2,13 +2,19 @@
 import { Command } from 'commander';
 import { randomUUID } from 'node:crypto';
 import { load, save, exists } from './store.js';
-import { FileModel, Vesting } from './model.js';
+import { FileModel, Vesting, EntityType, getEntityDefaults } from './model.js';
 import { LOGO, NAME, TAGLINE } from './branding.js';
 import { StakeholderService } from './services/stakeholder-service.js';
 import { SecurityService } from './services/security-service.js';
 import { EquityService } from './services/equity-service.js';
 import { ReportingService } from './services/reporting-service.js';
 import { AuditService } from './services/audit-service.js';
+import {
+  runInitWizard,
+  parseFounderString,
+  calculatePoolFromPercentage,
+  buildModelFromWizard,
+} from './init-wizard.js';
 
 const program = new Command();
 
@@ -22,49 +28,163 @@ program
 program
   .command('init')
   .description('Initialize a new captable.json')
-  .option('-n, --name <name>', 'company name', 'Untitled, Inc.')
-  .option('-p, --pool <qty>', 'option pool authorized', '2000000')
-  .action((opts) => {
+  .option('-n, --name <name>', 'company name')
+  .option('-t, --type <type>', 'entity type: c-corp, s-corp, or llc')
+  .option('-s, --state <state>', 'state of incorporation (e.g., DE)')
+  .option('-c, --currency <currency>', 'currency code (e.g., USD)')
+  .option('-a, --authorized <qty>', 'authorized shares/units')
+  .option('--par <value>', 'par value per share (corps only)')
+  .option('--pool <qty>', 'option pool size (absolute number)')
+  .option('--pool-pct <pct>', 'option pool as % of fully diluted')
+  .option('-f, --founder <founder...>', 'founder(s) in format "Name:shares" or "Name:email:shares"')
+  .option('-w, --wizard', 'run interactive setup wizard')
+  .action(async (opts) => {
     if (exists('captable.json')) {
       console.error('❌ captable.json already exists');
       process.exit(1);
     }
 
-    const model: FileModel = {
-      version: 1,
-      company: {
-        id: `comp_${randomUUID()}`,
-        name: opts.name,
-        formationDate: new Date().toISOString().slice(0, 10),
-      },
-      stakeholders: [],
-      securityClasses: [
-        {
-          id: 'sc_common',
-          kind: 'COMMON',
-          label: 'Common Stock',
-          authorized: 10000000,
-          parValue: 0.0001,
+    let model: FileModel;
+
+    if (opts.wizard) {
+      // Run interactive wizard
+      const wizardResult = await runInitWizard();
+      model = buildModelFromWizard(wizardResult);
+    } else {
+      // Use flags/defaults
+      const entityTypeStr = (opts.type || 'c-corp').toUpperCase().replace('-', '_');
+      const entityType = (
+        entityTypeStr === 'C_CORP' || entityTypeStr === 'S_CORP' || entityTypeStr === 'LLC'
+          ? entityTypeStr
+          : 'C_CORP'
+      ) as EntityType;
+
+      const defaults = getEntityDefaults(entityType);
+      const isCorp = entityType === 'C_CORP' || entityType === 'S_CORP';
+
+      model = {
+        version: 1,
+        company: {
+          id: `comp_${randomUUID()}`,
+          name: opts.name || 'Untitled, Inc.',
+          formationDate: new Date().toISOString().slice(0, 10),
+          entityType,
+          jurisdiction: opts.state || 'DE',
+          currency: opts.currency || 'USD',
         },
-        {
+        stakeholders: [],
+        securityClasses: [],
+        issuances: [],
+        optionGrants: [],
+        valuations: [],
+        audit: [],
+      };
+
+      // Add common stock/units
+      model.securityClasses.push({
+        id: 'sc_common',
+        kind: 'COMMON',
+        label: isCorp ? 'Common Stock' : 'Common Units',
+        authorized: Number(opts.authorized || defaults.authorized),
+        parValue: isCorp ? Number(opts.par ?? defaults.parValue) : undefined,
+      });
+
+      // Parse and add founders
+      let totalFounderShares = 0;
+      const founders = opts.founder || [];
+      for (const founderStr of founders) {
+        try {
+          const founder = parseFounderString(founderStr);
+          const stakeholderId = `sh_${randomUUID()}`;
+
+          model.stakeholders.push({
+            id: stakeholderId,
+            type: 'person',
+            name: founder.name,
+            email: founder.email,
+          });
+
+          if (founder.shares > 0) {
+            model.issuances.push({
+              id: `is_${randomUUID()}`,
+              securityClassId: 'sc_common',
+              stakeholderId,
+              qty: founder.shares,
+              pps: isCorp ? Number(opts.par ?? defaults.parValue) : 0,
+              date: model.company.formationDate!,
+            });
+            totalFounderShares += founder.shares;
+          }
+        } catch {
+          console.error(`❌ Invalid founder format: ${founderStr}`);
+          console.error('   Use format: "Name:shares" or "Name:email:shares"');
+          process.exit(1);
+        }
+      }
+
+      // Add option pool
+      let poolQty: number | undefined;
+      if (opts.pool) {
+        poolQty = Number(opts.pool);
+      } else if (opts.poolPct && totalFounderShares > 0) {
+        poolQty = calculatePoolFromPercentage(totalFounderShares, Number(opts.poolPct));
+      }
+
+      if (poolQty && poolQty > 0) {
+        const currentYear = new Date().getFullYear();
+        model.securityClasses.push({
           id: 'sc_pool',
           kind: 'OPTION_POOL',
-          label: '2024 Stock Option Plan',
-          authorized: Number(opts.pool),
-        },
-      ],
-      issuances: [],
-      optionGrants: [],
-      valuations: [],
-      audit: [],
-    };
+          label: `${currentYear} Stock Option Plan`,
+          authorized: poolQty,
+        });
+      }
+    }
 
+    // Add audit entry
     const auditService = new AuditService(model);
-    auditService.logAction('INIT', { name: opts.name, pool: Number(opts.pool) });
+    auditService.logAction('INIT', {
+      name: model.company.name,
+      entityType: model.company.entityType,
+      jurisdiction: model.company.jurisdiction,
+      founders: model.stakeholders.length,
+      pool: model.securityClasses.find((sc) => sc.kind === 'OPTION_POOL')?.authorized || 0,
+    });
 
+    // Save and display results
     save(model);
-    console.log('✅ Created captable.json');
+    console.log('\n✅ Created captable.json');
     console.log(`⚓ ${NAME}: ${TAGLINE}`);
+
+    const defaults = getEntityDefaults(model.company.entityType!);
+    const commonClass = model.securityClasses.find((sc) => sc.kind === 'COMMON');
+    const poolClass = model.securityClasses.find((sc) => sc.kind === 'OPTION_POOL');
+
+    console.log(
+      `\n🏢 Entity: ${model.company.entityType?.replace('_', '-')} (${model.company.jurisdiction})`
+    );
+    if (commonClass) {
+      const parStr = commonClass.parValue ? ` @ $${commonClass.parValue} par` : '';
+      console.log(
+        `💰 Authorized: ${commonClass.authorized.toLocaleString()} ${defaults.unitsName.toLowerCase()}${parStr}`
+      );
+    }
+
+    if (model.stakeholders.length > 0) {
+      const founderNames = model.stakeholders.map((s) => s.name).join(', ');
+      console.log(`👥 Founders: ${founderNames}`);
+    }
+
+    if (poolClass) {
+      console.log(
+        `🎯 Option Pool: ${poolClass.authorized.toLocaleString()} ${defaults.unitsName.toLowerCase()}`
+      );
+    }
+
+    console.log('\nNext steps:');
+    console.log('→ captan chart          View cap table');
+    console.log('→ captan grant          Issue options');
+    console.log('→ captan export csv     Export to spreadsheet');
   });
 
 const enlist = program

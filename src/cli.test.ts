@@ -44,9 +44,11 @@ describe('CLI Integration Tests', () => {
 
       const model = JSON.parse(fs.readFileSync(testFile, 'utf8'));
       expect(model.company.name).toBe('Untitled, Inc.');
-      expect(model.securityClasses).toHaveLength(2);
+      expect(model.company.entityType).toBe('C_CORP');
+      expect(model.company.jurisdiction).toBe('DE');
+      expect(model.securityClasses).toHaveLength(1); // Only common stock by default
       expect(model.securityClasses[0].kind).toBe('COMMON');
-      expect(model.securityClasses[1].kind).toBe('OPTION_POOL');
+      expect(model.securityClasses[0].authorized).toBe(10000000);
     });
 
     it('should accept custom company name and pool size', () => {
@@ -118,6 +120,11 @@ describe('CLI Integration Tests', () => {
     });
 
     it('should list security classes', () => {
+      // Add a pool first so we have something to list
+      runCLI(
+        'security:add --kind OPTION_POOL --label "2024 Stock Option Plan" --authorized 2000000'
+      );
+
       const output = runCLI('list securities');
 
       expect(output).toContain('Common Stock');
@@ -149,6 +156,9 @@ describe('CLI Integration Tests', () => {
     });
 
     it('should grant options', () => {
+      // Create an option pool first
+      runCLI('security:add --kind OPTION_POOL --label "Stock Option Plan" --authorized 1000000');
+
       runCLI('enlist stakeholder --name "Bob"');
       const model1 = JSON.parse(fs.readFileSync(testFile, 'utf8'));
       const bobId = model1.stakeholders[0].id;

@@ -4,6 +4,8 @@ export type UUID = string;
 
 export type Kind = 'COMMON' | 'PREF' | 'OPTION_POOL';
 
+export type EntityType = 'C_CORP' | 'S_CORP' | 'LLC';
+
 export const VestingSchema = z.object({
   start: z.string(),
   monthsTotal: z.number().int().positive(),
@@ -69,6 +71,9 @@ export const FileModelSchema = z.object({
     id: z.string(),
     name: z.string(),
     formationDate: z.string().optional(),
+    entityType: z.enum(['C_CORP', 'S_CORP', 'LLC']).optional(),
+    jurisdiction: z.string().optional(),
+    currency: z.string().optional(),
   }),
   stakeholders: z.array(StakeholderSchema),
   securityClasses: z.array(SecurityClassSchema),
@@ -129,6 +134,28 @@ export interface CapTableTotals {
 export interface CapTableResult {
   rows: CapTableRow[];
   totals: CapTableTotals;
+}
+
+export function getEntityDefaults(entityType: EntityType) {
+  switch (entityType) {
+    case 'C_CORP':
+    case 'S_CORP':
+      return {
+        authorized: 10000000,
+        parValue: 0.0001,
+        unitsName: 'Shares',
+        holderName: 'Stockholder',
+        poolPct: 20,
+      };
+    case 'LLC':
+      return {
+        authorized: 1000000,
+        parValue: undefined,
+        unitsName: 'Units',
+        holderName: 'Member',
+        poolPct: 0,
+      };
+  }
 }
 
 export function calcCap(model: FileModel, asOfISO: string): CapTableResult {
