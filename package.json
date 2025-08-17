@@ -1,0 +1,51 @@
+{
+  "name": "captan",
+  "version": "0.1.0",
+  "description": "Captan — Command your ownership. A tiny, hackable CLI cap table tool.",
+  "type": "module",
+  "bin": {
+    "captan": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p .",
+    "dev": "tsx src/cli.ts",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage",
+    "test:all": "vitest run",
+    "validate:fix": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "commander": "^12.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "@vitest/ui": "^2.1.8",
+    "tsx": "^4.16.2",
+    "typescript": "^5.4.0",
+    "vitest": "^2.1.8"
+  },
+  "keywords": [
+    "cap-table",
+    "equity",
+    "options",
+    "vesting",
+    "cli"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/<you>/captan.git"
+  },
+  "homepage": "https://github.com/<you>/captan#readme",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ]
+}
