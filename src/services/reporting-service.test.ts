@@ -24,6 +24,7 @@ describe('ReportingService', () => {
       securityClasses: [],
       issuances: [],
       optionGrants: [],
+      safes: [],
       valuations: [],
       audit: [],
     };

@@ -65,7 +65,7 @@ export class ReportingService {
     // Include SAFEs
     for (const safe of this.model.safes) {
       const stakeholder = this.stakeholderService.getStakeholder(safe.stakeholderId);
-      
+
       lines.push(
         [
           stakeholder?.name ?? safe.stakeholderId,
@@ -132,14 +132,16 @@ export class ReportingService {
       lines.push('');
       lines.push('SAFEs (Unconverted):');
       lines.push('====================');
-      
+
       const currency = this.model.company.currency || 'USD';
       for (const holder of safeSummary.byStakeholder) {
         for (const safe of holder.safes) {
           const capStr = safe.cap ? `Cap: ${currency} ${safe.cap.toLocaleString()}` : '';
-          const discountStr = safe.discount ? `Discount: ${Math.round((1 - safe.discount) * 100)}%` : '';
+          const discountStr = safe.discount
+            ? `Discount: ${Math.round((1 - safe.discount) * 100)}%`
+            : '';
           const terms = [capStr, discountStr].filter(Boolean).join(', ');
-          
+
           lines.push(
             `${holder.stakeholderName.padEnd(25)} ${currency} ${safe.amount
               .toLocaleString()

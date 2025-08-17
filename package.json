@@ -49,11 +49,12 @@
     "node": ">=18"
   },
   "license": "MIT",
+  "author": "acossta",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/<you>/captan.git"
+    "url": "git+https://github.com/acossta/captan.git"
   },
-  "homepage": "https://github.com/<you>/captan#readme",
+  "homepage": "https://github.com/acossta/captan#readme",
   "files": [
     "dist",
     "README.md",

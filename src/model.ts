@@ -190,7 +190,7 @@ export function convertSAFE(
 ): SAFEConversion {
   // Calculate discount price if applicable
   const discountPrice = safe.discount ? pricePerShare * safe.discount : pricePerShare;
-  
+
   // Calculate cap price if applicable
   let capPrice = pricePerShare;
   if (safe.cap) {
@@ -204,11 +204,11 @@ export function convertSAFE(
       capPrice = safe.cap / preMoneyShares;
     }
   }
-  
+
   // Determine effective conversion price and reason
   let effectivePrice = pricePerShare;
   let reason: 'cap' | 'discount' | 'price' = 'price';
-  
+
   if (capPrice < effectivePrice) {
     effectivePrice = capPrice;
     reason = 'cap';
@@ -217,9 +217,9 @@ export function convertSAFE(
     effectivePrice = discountPrice;
     reason = 'discount';
   }
-  
+
   const sharesIssued = Math.floor(safe.amount / effectivePrice);
-  
+
   return {
     safeId: safe.id,
     stakeholderId: safe.stakeholderId,

@@ -4,8 +4,7 @@ Open Source Cap Table Management CLI
 
 [![npm version](https://img.shields.io/npm/v/captan.svg?color=blue&logo=npm)](https://www.npmjs.com/package/captan)
 [![Downloads](https://img.shields.io/npm/dm/captan.svg?color=green)](https://www.npmjs.com/package/captan)
-[![Build Status](https://github.com/<your-org>/captan/actions/workflows/ci.yml/badge.svg)](https://github.com/<your-org>/captan/actions)
-[![Coverage Status](https://coveralls.io/repos/github/<your-org>/captan/badge.svg?branch=main)](https://coveralls.io/github/<your-org>/captan?branch=main)
+[![GitHub stars](https://img.shields.io/github/stars/acossta/captan?style=social)](https://github.com/acossta/captan)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
@@ -243,5 +242,6 @@ Captan is **not** legal advice. Always verify calculations and consult professio
 ## 🌐 Links
 
 - [npm package](https://www.npmjs.com/package/captan)
-- [GitHub Issues](https://github.com/<your-org>/captan/issues)
+- [GitHub Repository](https://github.com/acossta/captan)
+- [GitHub Issues](https://github.com/acossta/captan/issues)
 - [Changelog](CHANGELOG.md)

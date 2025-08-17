@@ -90,7 +90,7 @@ export class SAFEService {
     for (const safe of this.model.safes) {
       const conversion = convertSAFE(safe, pps, currentShares, safe.type === 'post');
       const stakeholder = this.stakeholderService.getStakeholder(safe.stakeholderId);
-      
+
       conversions.push({
         ...conversion,
         stakeholderName: stakeholder?.name || 'Unknown',
@@ -103,7 +103,7 @@ export class SAFEService {
   private getCurrentOutstandingShares(): number {
     // Calculate total outstanding shares (issued shares only, not options)
     let total = 0;
-    
+
     for (const issuance of this.model.issuances) {
       const securityClass = this.model.securityClasses.find(
         (sc) => sc.id === issuance.securityClassId
@@ -113,7 +113,7 @@ export class SAFEService {
         total += issuance.qty;
       }
     }
-    
+
     return total;
   }
 

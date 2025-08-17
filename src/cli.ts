@@ -405,7 +405,7 @@ program
       });
 
       save(model);
-      
+
       const currency = model.company.currency || 'USD';
       console.log(`💰 Added SAFE for ${stakeholder?.name}`);
       console.log(`   Amount: ${currency} ${safe.amount.toLocaleString()}`);
@@ -431,7 +431,7 @@ program
       console.log(JSON.stringify(summary, null, 2));
     } else {
       const summary = safeService.getSAFEsSummary();
-      
+
       if (summary.count === 0) {
         console.log('No SAFEs found');
         return;
@@ -439,13 +439,15 @@ program
 
       console.log('\nSAFEs Outstanding');
       console.log('=================');
-      
+
       for (const holder of summary.byStakeholder) {
         for (const safe of holder.safes) {
           const capStr = safe.cap ? `Cap: ${currency} ${safe.cap.toLocaleString()}` : '';
-          const discountStr = safe.discount ? `Discount: ${Math.round((1 - safe.discount) * 100)}%` : '';
+          const discountStr = safe.discount
+            ? `Discount: ${Math.round((1 - safe.discount) * 100)}%`
+            : '';
           const terms = [capStr, discountStr].filter(Boolean).join('  ');
-          
+
           console.log(
             `${holder.stakeholderName.padEnd(20)} ${currency} ${safe.amount
               .toLocaleString()
@@ -453,7 +455,7 @@ program
           );
         }
       }
-      
+
       console.log(`\nTotal: ${currency} ${summary.totalAmount.toLocaleString()}`);
     }
   });
@@ -474,7 +476,7 @@ program
       newMoneyRaised: Number(opts.newMoney),
       pricePerShare: opts.pps ? Number(opts.pps) : undefined,
     };
-    
+
     const conversions = safeService.simulateConversion(roundTerms);
 
     if (conversions.length === 0) {
@@ -485,7 +487,7 @@ program
     // Calculate or use provided price per share
     const currentShares = model.issuances.reduce((sum, i) => sum + i.qty, 0);
     const pps = roundTerms.pricePerShare || roundTerms.preMoneyValuation / currentShares;
-    
+
     console.log('\nSAFE Conversion Simulation');
     console.log('==========================');
     console.log(`Round Terms: ${currency} ${Number(opts.preMoney).toLocaleString()} pre-money`);
@@ -494,19 +496,23 @@ program
 
     let totalShares = 0;
     for (const conv of conversions) {
-      const reasonStr = 
-        conv.conversionReason === 'cap' ? '(cap price)' :
-        conv.conversionReason === 'discount' ? '(discount price)' :
-        '(round price)';
-      
+      const reasonStr =
+        conv.conversionReason === 'cap'
+          ? '(cap price)'
+          : conv.conversionReason === 'discount'
+            ? '(discount price)'
+            : '(round price)';
+
       console.log(
         `${conv.stakeholderName.padEnd(20)} ${currency} ${conv.investmentAmount
           .toLocaleString()
-          .padStart(10)} → ${conv.sharesIssued.toLocaleString().padStart(10)} shares @ ${currency}${conv.conversionPrice.toFixed(2)} ${reasonStr}`
+          .padStart(
+            10
+          )} → ${conv.sharesIssued.toLocaleString().padStart(10)} shares @ ${currency}${conv.conversionPrice.toFixed(2)} ${reasonStr}`
       );
       totalShares += conv.sharesIssued;
     }
-    
+
     console.log(`\nTotal SAFE conversion: ${totalShares.toLocaleString()} shares`);
   });
 
