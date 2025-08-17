@@ -1,10 +1,31 @@
-# Captan
+# 🧭 Captan  
+**Command your ownership.**  
+Open Source Cap Table Management CLI
 
-**Command your ownership.** A tiny, hackable CLI cap table tool backed by a single `captable.json`.
+[![npm version](https://img.shields.io/npm/v/captan.svg?color=blue&logo=npm)](https://www.npmjs.com/package/captan)
+[![Downloads](https://img.shields.io/npm/dm/captan.svg?color=green)](https://www.npmjs.com/package/captan)
+[![Build Status](https://github.com/<your-org>/captan/actions/workflows/ci.yml/badge.svg)](https://github.com/<your-org>/captan/actions)
+[![Coverage Status](https://coveralls.io/repos/github/<your-org>/captan/badge.svg?branch=main)](https://coveralls.io/github/<your-org>/captan?branch=main)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## Install / Run
+---
 
-Use **npx** (no install):
+## ✨ Overview
+Captan is a lightweight, hackable CLI tool for managing startup **cap tables**.  
+Keep ownership records simple and transparent with a single JSON file (`captable.json`).  
+
+- 🪶 Zero database required — just git & JSON  
+- 📊 Real cap table math: outstanding vs fully diluted  
+- ⏳ Simple vesting schedules with cliffs  
+- 📜 Audit log for every action  
+- 📤 Export to CSV/JSON for investors & lawyers  
+
+---
+
+## 🚀 QuickStart
+
+### Install
+Use npx (no install):
 ```bash
 npx captan@latest --help
 ```
@@ -17,56 +38,54 @@ captan --help
 
 > Requires Node.js 18+
 
-## One-minute QuickStart
+### One-minute flow
 
-1. Initialize a new cap table:
 ```bash
+# 1. Init a new cap table
 captan init --name "Acme, Inc." --pool 2000000
-```
 
-2. Add stakeholders:
-```bash
+# 2. Add stakeholders
 captan enlist stakeholder --name "Alice Founder" --email alice@acme.com
-captan enlist stakeholder --name "Bob Engineer" --email bob@acme.com
-```
+captan enlist stakeholder --name "Bob Eng"
 
-3. (Optional) Add a preferred class:
-```bash
-captan security:add --kind PREF --label "Series Seed" --authorized 5000000
-```
-
-4. Issue common shares:
-```bash
-# List stakeholders to get IDs
-captan list stakeholders
-
-# Issue shares (replace sh_... with actual ID)
+# 3. Issue shares
 captan issue --security sc_common --holder sh_alice --qty 5000000 --pps 0.0001 --date 2024-01-02
-```
 
-5. Grant options with vesting:
-```bash
-captan grant --holder sh_bob --qty 200000 --exercise 0.10 \
-  --grant-date 2024-04-01 --start 2024-04-01 --months 48 --cliff 12
-```
+# 4. Grant options
+captan grant --holder sh_bob --qty 200000 --exercise 0.10 --grant-date 2024-04-01 --start 2024-04-01
 
-6. See your cap table:
-```bash
+# 5. View your cap table
 captan chart --date 2025-08-16
 ```
 
-7. Export data:
-```bash
-captan export json > captable-backup.json
-captan export csv > captable.csv
+### 📊 Sample Output
+```yaml
+📊 Captan — Cap Table (as of 2025-08-16)
+Name                      Outstanding    %
+Alice Founder                  5000000   96.15%
+Bob Eng                          80000    1.54%
+
+Totals
+Issued equity:       5000000
+Vested options:      80000
+Outstanding total:   5080000
+FD issued:           5000000
+FD grants:           200000
+FD pool remaining:   1800000
+Fully diluted total: 7000000
 ```
 
-8. View audit trail:
-```bash
-captan log
-```
+## 🧩 Features
 
-## Commands
+- **Stakeholder management**
+- **Security classes** (common, preferred, option pools)
+- **Share issuances**
+- **Option grants & vesting schedules**
+- **Cap table reports** (outstanding & FD)
+- **Export CSV/JSON**
+- **Audit history** (the "ship's log")
+
+## 📖 Commands
 
 ### Core Commands
 - `captan init` - Initialize a new cap table
@@ -148,26 +167,42 @@ Captan uses a service-oriented architecture:
 - **Store**: File persistence layer
 - **CLI**: Thin command interface
 
-## Development
+## 🛠️ Development
 
 ```bash
-# Install dependencies
+git clone https://github.com/<your-org>/captan
+cd captan
 yarn install
-
-# Run tests
-yarn test
-
-# Build for production
 yarn build
-
-# Development mode
-yarn dev <command>
+node dist/cli.js --help
 ```
 
-## License
+Run in dev mode:
+```bash
+yarn dev init --name "DemoCo"
+```
 
-MIT License - see LICENSE file for details.
+Run tests:
+```bash
+yarn test
+yarn test:coverage
+```
 
-## Notes
+## 🤝 Contributing
+
+Pull requests are welcome! Please open an issue first for major changes.
+For development setup, see [CONTRIBUTING.md](CONTRIBUTING.md) (coming soon).
+
+## 📜 License
+
+MIT © 2025 Captan Contributors
+
+## ⚠️ Disclaimer
 
 Captan is **not** legal advice. Always verify calculations and consult professionals before sending cap tables to investors or making equity decisions.
+
+## 🌐 Links
+
+- [npm package](https://www.npmjs.com/package/captan)
+- [GitHub Issues](https://github.com/<your-org>/captan/issues)
+- [Changelog](CHANGELOG.md)
