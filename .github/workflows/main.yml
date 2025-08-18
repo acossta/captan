@@ -47,12 +47,14 @@ jobs:
   coverage:
     needs: test
     runs-on: ubuntu-latest
+    if: always()
     steps:
       - name: Coveralls Finished
         uses: coverallsapp/github-action@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           parallel-finished: true
+        continue-on-error: true
 
   publish:
     needs: test
