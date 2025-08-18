@@ -3,6 +3,7 @@
 
 # Git
 - NEVER use no-verify
+- NEVER commit directly to `main`
 
 # Testing
 - Use vitest

@@ -26,12 +26,23 @@ describe('CLI Integration Tests', () => {
 
   const runCLI = (args: string): string => {
     try {
-      return execSync(`npx tsx ${cliPath} ${args}`, {
+      const output = execSync(`npx tsx ${cliPath} ${args}`, {
         encoding: 'utf8',
         cwd: testDir,
+        stdio: 'pipe',
       });
+      // Filter out npm warnings
+      return output
+        .split('\n')
+        .filter((line) => !line.startsWith('npm warn'))
+        .join('\n');
     } catch (error: any) {
-      return error.stdout || error.stderr || error.message;
+      const errorOutput = error.stdout || error.stderr || error.message;
+      // Filter out npm warnings from error output too
+      return errorOutput
+        .split('\n')
+        .filter((line) => !line.startsWith('npm warn'))
+        .join('\n');
     }
   };
 
