@@ -79,7 +79,7 @@ export class SAFEService {
   }
 
   simulateConversion(roundTerms: RoundTerms): ConversionResult[] {
-    const { preMoneyValuation, newMoneyRaised, pricePerShare } = roundTerms;
+    const { preMoneyValuation, pricePerShare } = roundTerms;
 
     // Calculate price per share if not provided
     const currentShares = this.getCurrentOutstandingShares();

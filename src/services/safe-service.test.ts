@@ -21,10 +21,23 @@ describe('SAFEService', () => {
         { id: bobId, type: 'person', name: 'Bob Angel' },
       ],
       securityClasses: [
-        { id: 'sc_common', kind: 'COMMON', label: 'Common Stock', authorized: 10000000, parValue: 0.0001 },
+        {
+          id: 'sc_common',
+          kind: 'COMMON',
+          label: 'Common Stock',
+          authorized: 10000000,
+          parValue: 0.0001,
+        },
       ],
       issuances: [
-        { id: 'is_1', securityClassId: 'sc_common', stakeholderId: 'sh_founder', qty: 5000000, pps: 0.0001, date: '2024-01-01' },
+        {
+          id: 'is_1',
+          securityClassId: 'sc_common',
+          stakeholderId: 'sh_founder',
+          qty: 5000000,
+          pps: 0.0001,
+          date: '2024-01-01',
+        },
       ],
       optionGrants: [],
       safes: [],
@@ -249,12 +262,12 @@ describe('SAFEService', () => {
       service.addSAFE({ stakeholderId: bobId, amount: 25000 });
 
       const summary = service.getSAFEsSummary();
-      
+
       expect(summary.count).toBe(3);
       expect(summary.totalAmount).toBe(175000);
       expect(summary.byStakeholder).toHaveLength(2);
-      
-      const alice = summary.byStakeholder.find(s => s.stakeholderId === aliceId);
+
+      const alice = summary.byStakeholder.find((s) => s.stakeholderId === aliceId);
       expect(alice?.stakeholderName).toBe('Alice Investor');
       expect(alice?.amount).toBe(150000);
       expect(alice?.safes).toHaveLength(2);
@@ -311,13 +324,13 @@ describe('SAFEService', () => {
         cap: 4000000,
         discount: 0.8,
       });
-      
+
       service.addSAFE({
         stakeholderId: bobId,
         amount: 50000,
         discount: 0.7,
       });
-      
+
       service.addSAFE({
         stakeholderId: aliceId,
         amount: 75000,
@@ -331,17 +344,17 @@ describe('SAFEService', () => {
       });
 
       expect(conversions).toHaveLength(3);
-      
+
       // First SAFE: cap vs discount
       const conv1 = conversions[0];
       expect(conv1.conversionPrice).toBe(0.8); // Cap price wins (4M/5M = 0.8 < 2.0*0.8 = 1.6)
       expect(conv1.conversionReason).toBe('cap');
-      
+
       // Second SAFE: discount only
       const conv2 = conversions[1];
       expect(conv2.conversionPrice).toBe(1.4); // 2.0 * 0.7
       expect(conv2.conversionReason).toBe('discount');
-      
+
       // Third SAFE: cap only
       const conv3 = conversions[2];
       expect(conv3.conversionPrice).toBe(0.6); // 3M / 5M
@@ -451,7 +464,7 @@ describe('SAFEService', () => {
     it('should calculate correct shares when pre-money shares is low', () => {
       // Simulate early stage with few shares
       model.issuances[0].qty = 100000; // Only 100k shares issued
-      
+
       service.addSAFE({
         stakeholderId: aliceId,
         amount: 50000,

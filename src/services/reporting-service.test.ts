@@ -196,32 +196,36 @@ describe('ReportingService', () => {
     it('should handle cap table with multiple security classes and stakeholders', () => {
       // Add preferred stock class
       const prefId = securityService.addSecurityClass('PREF', 'Series A', 3000000, 0.001).id;
-      
+
       // Add more stakeholders
-      const charlieId = stakeholderService.addStakeholder('Charlie VC', 'entity', 'charlie@vc.com').id;
+      const charlieId = stakeholderService.addStakeholder(
+        'Charlie VC',
+        'entity',
+        'charlie@vc.com'
+      ).id;
       const dianaId = stakeholderService.addStakeholder('Diana Employee', 'person').id;
-      
+
       // Issue different security types
       equityService.issueShares(commonId, aliceId, 3000000, 0.0001, '2024-01-01');
       equityService.issueShares(commonId, bobId, 2000000, 0.0001, '2024-01-01');
       equityService.issueShares(prefId, charlieId, 1500000, 1.0, '2024-06-01');
-      
+
       // Grant options with different vesting
       const vesting1: Vesting = { start: '2024-01-01', monthsTotal: 48, cliffMonths: 12 };
       const vesting2: Vesting = { start: '2024-06-01', monthsTotal: 36, cliffMonths: 6 };
       equityService.grantOptions(dianaId, 200000, 0.1, '2024-01-01', vesting1);
       equityService.grantOptions(bobId, 100000, 0.2, '2024-06-01', vesting2);
-      
+
       const capTable = service.generateCapTable('2025-01-01');
-      
+
       expect(capTable.rows).toHaveLength(4);
       expect(capTable.totals.issuedTotal).toBe(6500000); // 3M + 2M + 1.5M
       expect(capTable.totals.vestedOptions).toBeGreaterThan(0);
       expect(capTable.totals.fd.grants).toBe(300000); // 200k + 100k
-      
+
       // Check percentage calculations
-      const aliceRow = capTable.rows.find(r => r.name === 'Alice');
-      const charlieRow = capTable.rows.find(r => r.name === 'Charlie VC');
+      const aliceRow = capTable.rows.find((r) => r.name === 'Alice');
+      const charlieRow = capTable.rows.find((r) => r.name === 'Charlie VC');
       expect(aliceRow?.outstanding).toBe(3000000);
       expect(charlieRow?.outstanding).toBe(1500000);
     });
@@ -229,22 +233,22 @@ describe('ReportingService', () => {
     it('should generate summary with mixed holdings and SAFEs', () => {
       // Issue shares
       equityService.issueShares(commonId, aliceId, 5000000, 0.0001, '2024-01-01');
-      
+
       // Add SAFEs (using SAFEService)
       const safeService = new SAFEService(model);
-      safeService.addSAFE({ 
-        stakeholderId: bobId, 
-        amount: 100000, 
+      safeService.addSAFE({
+        stakeholderId: bobId,
+        amount: 100000,
         cap: 5000000,
-        discount: 0.8 
+        discount: 0.8,
       });
-      
+
       // Grant options
       const vesting: Vesting = { start: '2024-01-01', monthsTotal: 48, cliffMonths: 12 };
       equityService.grantOptions(aliceId, 300000, 0.1, '2024-01-01', vesting);
-      
+
       const summary = service.generateSummary('2025-01-01');
-      
+
       expect(summary).toContain('Alice');
       expect(summary).toContain('Bob');
       expect(summary).toContain('SAFEs (Unconverted)');
@@ -258,32 +262,34 @@ describe('ReportingService', () => {
       equityService.issueShares(commonId, aliceId, 3000000, 0.0001, '2024-01-01');
       equityService.issueShares(commonId, aliceId, 1000000, 0.0001, '2024-03-01');
       equityService.issueShares(commonId, bobId, 2000000, 0.0001, '2024-01-01');
-      
+
       // Options
       equityService.grantOptions(aliceId, 100000, 0.1, '2024-01-01');
       equityService.grantOptions(bobId, 200000, 0.2, '2024-06-01');
-      
+
       const csv = service.exportCSV(true);
       const lines = csv.split('\n');
-      
+
       // Header + 3 issuances + 2 grants = 6 lines minimum
       expect(lines.length).toBeGreaterThanOrEqual(6);
-      
+
       // Check Alice has multiple entries
-      const aliceLines = lines.filter(l => l.includes('Alice'));
+      const aliceLines = lines.filter((l) => l.includes('Alice'));
       expect(aliceLines.length).toBe(3); // 2 issuances + 1 grant
-      
+
       // Verify CSV structure
-      expect(lines[0]).toBe('stakeholder_name,stakeholder_id,type,security_class,quantity,price_per_share,date');
+      expect(lines[0]).toBe(
+        'stakeholder_name,stakeholder_id,type,security_class,quantity,price_per_share,date'
+      );
     });
 
     it('should handle stakeholder with no holdings in summary', () => {
       const emptyId = stakeholderService.addStakeholder('Empty Holder', 'person').id;
-      
+
       equityService.issueShares(commonId, aliceId, 1000000, 0.0001, '2024-01-01');
-      
+
       const summary = service.generateSummary();
-      
+
       // Empty holder should not appear in cap table
       expect(summary).toContain('Alice');
       expect(summary).not.toContain('Empty Holder');
@@ -291,17 +297,17 @@ describe('ReportingService', () => {
 
     it('should calculate percentages correctly with multiple security classes', () => {
       const prefId = securityService.addSecurityClass('PREF', 'Series A', 5000000).id;
-      
+
       equityService.issueShares(commonId, aliceId, 6000000, 0.0001, '2024-01-01');
       equityService.issueShares(prefId, bobId, 4000000, 1.0, '2024-06-01');
-      
+
       const capTable = service.generateCapTable();
-      
+
       expect(capTable.totals.issuedTotal).toBe(10000000);
-      
-      const aliceRow = capTable.rows.find(r => r.name === 'Alice');
-      const bobRow = capTable.rows.find(r => r.name === 'Bob');
-      
+
+      const aliceRow = capTable.rows.find((r) => r.name === 'Alice');
+      const bobRow = capTable.rows.find((r) => r.name === 'Bob');
+
       expect(aliceRow?.pctOutstanding).toBeCloseTo(0.6, 2); // 60%
       expect(bobRow?.pctOutstanding).toBeCloseTo(0.4, 2); // 40%
     });
@@ -319,17 +325,17 @@ describe('ReportingService', () => {
         valuations: [],
         audit: [],
       };
-      
+
       const emptyService = new ReportingService(emptyModel);
-      
+
       const summary = emptyService.generateSummary();
       expect(summary).toContain('Empty Co');
       expect(summary).toContain('Outstanding Total:     0');
-      
+
       const csv = emptyService.exportCSV();
       const lines = csv.split('\n');
       expect(lines).toHaveLength(1); // Just header
-      
+
       const capTable = emptyService.generateCapTable();
       expect(capTable.rows).toHaveLength(0);
       expect(capTable.totals.outstandingTotal).toBe(0);
@@ -337,16 +343,16 @@ describe('ReportingService', () => {
 
     it('should handle special characters in names for CSV export', () => {
       const specialId = stakeholderService.addStakeholder(
-        'Alice "The Investor" O\'Brien, Jr.', 
+        'Alice "The Investor" O\'Brien, Jr.',
         'person',
         'alice@test.com'
       ).id;
-      
+
       equityService.issueShares(commonId, specialId, 1000000, 0.0001, '2024-01-01');
-      
+
       const csv = service.exportCSV();
       const lines = csv.split('\n');
-      
+
       // Should properly escape or handle special characters
       expect(lines[1]).toContain('Alice');
       expect(lines[1]).toContain('1000000');

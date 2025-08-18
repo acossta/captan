@@ -99,12 +99,67 @@ export const FileModelSchema = z.object({
 
 export type FileModel = z.infer<typeof FileModelSchema>;
 
-export function monthsBetween(aISO: string, bISO: string): number {
-  const a = new Date(aISO);
-  const b = new Date(bISO);
-  let months = (a.getFullYear() - b.getFullYear()) * 12 + (a.getMonth() - b.getMonth());
+/**
+ * Parse an ISO date string to UTC date, handling various formats
+ * Ensures consistent UTC handling regardless of system timezone
+ */
+export function parseUTCDate(dateStr: string): Date {
+  // Handle ISO date strings (YYYY-MM-DD) by forcing UTC interpretation
+  if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(dateStr)) {
+    // Append T00:00:00.000Z to force UTC
+    return new Date(dateStr + 'T00:00:00.000Z');
+  }
 
-  if (a.getDate() < b.getDate()) {
+  // Handle full ISO 8601 strings
+  if (dateStr.includes('T')) {
+    // If already has time component, ensure it's interpreted as UTC
+    if (!dateStr.endsWith('Z') && !dateStr.match(/[+-]\d{2}:\d{2}$/)) {
+      return new Date(dateStr + 'Z');
+    }
+    return new Date(dateStr);
+  }
+
+  // Fallback: treat as UTC date at midnight
+  return new Date(dateStr + 'T00:00:00.000Z');
+}
+
+/**
+ * Format a Date to ISO date string (YYYY-MM-DD) in UTC
+ */
+export function formatUTCDate(date: Date): string {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Validate an ISO date string
+ */
+export function isValidISODate(dateStr: string): boolean {
+  if (!/^\d{4}-\d{1,2}-\d{1,2}/.test(dateStr)) {
+    return false;
+  }
+  const date = parseUTCDate(dateStr);
+  return !isNaN(date.getTime());
+}
+
+/**
+ * Get today's date as ISO string in UTC
+ */
+export function getTodayUTC(): string {
+  return formatUTCDate(new Date());
+}
+
+export function monthsBetween(aISO: string, bISO: string): number {
+  // Parse dates as UTC to ensure timezone consistency
+  const a = parseUTCDate(aISO);
+  const b = parseUTCDate(bISO);
+
+  let months = (a.getUTCFullYear() - b.getUTCFullYear()) * 12 + (a.getUTCMonth() - b.getUTCMonth());
+
+  // Adjust for day of month
+  if (a.getUTCDate() < b.getUTCDate()) {
     months -= 1;
   }
 
@@ -182,43 +237,128 @@ export interface SAFEConversion {
   conversionReason: 'cap' | 'discount' | 'price';
 }
 
+/**
+ * Calculate post-money SAFE conversion price using iterative method
+ * Post-money cap = existing shares + new shares from SAFE
+ * This requires solving: shares = amount / (cap / (existingShares + shares))
+ */
+function calculatePostMoneyCapPrice(
+  safeAmount: number,
+  safeCap: number,
+  existingShares: number,
+  maxIterations = 10,
+  tolerance = 0.01
+): { price: number; shares: number } {
+  // Handle edge cases
+  if (existingShares === 0 || safeCap === 0) {
+    return { price: 1, shares: safeAmount };
+  }
+
+  // Initial guess: use pre-money calculation as starting point
+  let shares = safeAmount / (safeCap / existingShares);
+
+  // Iterate to converge on solution
+  for (let i = 0; i < maxIterations; i++) {
+    const newPrice = safeCap / (existingShares + shares);
+    const newShares = safeAmount / newPrice;
+
+    // Check convergence
+    if (Math.abs(newShares - shares) < tolerance) {
+      return { price: newPrice, shares: Math.floor(newShares) };
+    }
+
+    shares = newShares;
+  }
+
+  // Return best approximation after max iterations
+  const finalPrice = safeCap / (existingShares + shares);
+  return { price: finalPrice, shares: Math.floor(safeAmount / finalPrice) };
+}
+
 export function convertSAFE(
   safe: SAFE,
   pricePerShare: number,
   preMoneyShares: number,
   isPostMoney = false
 ): SAFEConversion {
+  // Validate inputs
+  if (safe.amount <= 0) {
+    return {
+      safeId: safe.id,
+      stakeholderId: safe.stakeholderId,
+      stakeholderName: '',
+      investmentAmount: safe.amount,
+      sharesIssued: 0,
+      conversionPrice: pricePerShare,
+      conversionReason: 'price',
+    };
+  }
+
+  // Handle edge case of zero price
+  if (pricePerShare <= 0 && (!safe.cap || safe.cap <= 0)) {
+    // Cannot convert without valid price
+    return {
+      safeId: safe.id,
+      stakeholderId: safe.stakeholderId,
+      stakeholderName: '',
+      investmentAmount: safe.amount,
+      sharesIssued: 0,
+      conversionPrice: 0,
+      conversionReason: 'price',
+    };
+  }
+
   // Calculate discount price if applicable
-  const discountPrice = safe.discount ? pricePerShare * safe.discount : pricePerShare;
+  const discountPrice =
+    safe.discount !== undefined && safe.discount > 0
+      ? pricePerShare * safe.discount
+      : pricePerShare;
 
   // Calculate cap price if applicable
-  let capPrice = pricePerShare;
-  if (safe.cap) {
-    if (isPostMoney || safe.type === 'post') {
-      // Post-money SAFE: cap divided by company capitalization INCLUDING the SAFE
-      // This is more complex and typically requires iterative calculation
-      // For simplicity, we'll use an approximation
-      capPrice = safe.cap / (preMoneyShares + Math.floor(safe.amount / pricePerShare));
-    } else {
-      // Pre-money SAFE: cap divided by company capitalization EXCLUDING the SAFE
+  let capPrice = Number.MAX_VALUE;
+  let capShares = 0;
+
+  if (safe.cap && safe.cap > 0) {
+    if ((isPostMoney || safe.type === 'post') && preMoneyShares > 0) {
+      // Post-money SAFE: use iterative calculation
+      const postMoneyResult = calculatePostMoneyCapPrice(safe.amount, safe.cap, preMoneyShares);
+      capPrice = postMoneyResult.price;
+      capShares = postMoneyResult.shares;
+    } else if (preMoneyShares > 0) {
+      // Pre-money SAFE: cap divided by existing shares
       capPrice = safe.cap / preMoneyShares;
+      capShares = Math.floor(safe.amount / capPrice);
+    } else {
+      // No existing shares, use cap as absolute ceiling
+      capPrice = pricePerShare < safe.cap ? pricePerShare : safe.cap;
+      capShares = Math.floor(safe.amount / capPrice);
     }
   }
 
-  // Determine effective conversion price and reason
+  // Determine effective conversion price and shares
   let effectivePrice = pricePerShare;
+  let sharesIssued = Math.floor(safe.amount / pricePerShare);
   let reason: 'cap' | 'discount' | 'price' = 'price';
 
-  if (capPrice < effectivePrice) {
+  // Check if cap price is better
+  if (safe.cap && capPrice < effectivePrice && capPrice > 0) {
     effectivePrice = capPrice;
+    sharesIssued = capShares;
     reason = 'cap';
   }
-  if (discountPrice < effectivePrice) {
+
+  // Check if discount price is better
+  if (safe.discount !== undefined && discountPrice < effectivePrice && discountPrice > 0) {
     effectivePrice = discountPrice;
+    sharesIssued = Math.floor(safe.amount / discountPrice);
     reason = 'discount';
   }
 
-  const sharesIssued = Math.floor(safe.amount / effectivePrice);
+  // Handle edge case where effectivePrice could be negative or zero
+  if (effectivePrice <= 0) {
+    effectivePrice = Math.abs(effectivePrice) || 0.000001;
+    sharesIssued = effectivePrice > 0 ? Math.floor(safe.amount / effectivePrice) : 0;
+  }
 
   return {
     safeId: safe.id,
