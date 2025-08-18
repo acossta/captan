@@ -1,0 +1,27 @@
+#!/bin/sh
+
+# Run lint-staged for linting and formatting staged files
+echo "🔍 Running lint and format on staged files..."
+npx lint-staged
+if [ $? -ne 0 ]; then
+  echo "❌ Lint or format check failed. Please fix errors."
+  exit 1
+fi
+
+# Run type check on entire project
+echo "📝 Running type check..."
+yarn type-check
+if [ $? -ne 0 ]; then
+  echo "❌ Type check failed. Please fix type errors."
+  exit 1
+fi
+
+# Run tests
+echo "🧪 Running tests..."
+yarn test:all
+if [ $? -ne 0 ]; then
+  echo "❌ Tests failed. Please fix failing tests."
+  exit 1
+fi
+
+echo "✅ All pre-commit checks passed!"
