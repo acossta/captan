@@ -21,7 +21,8 @@
     "prepublishOnly": "npm run build",
     "release:patch": "npm version patch && git push && git push --tags",
     "release:minor": "npm version minor && git push && git push --tags",
-    "release:major": "npm version major && git push && git push --tags"
+    "release:major": "npm version major && git push && git push --tags",
+    "prepare": "husky"
   },
   "dependencies": {
     "@inquirer/prompts": "^7.8.3",
@@ -36,6 +37,8 @@
     "eslint": "^9.33.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.5",
     "prettier": "^3.6.2",
     "tsx": "^4.16.2",
     "typescript": "^5.4.0",
@@ -62,5 +65,11 @@
     "dist",
     "README.md",
     "LICENSE"
-  ]
+  ],
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
+  }
 }
