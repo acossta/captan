@@ -4,6 +4,7 @@ Open Source Cap Table Management CLI
 
 [![npm version](https://img.shields.io/npm/v/captan.svg?color=blue&logo=npm)](https://www.npmjs.com/package/captan)
 [![Downloads](https://img.shields.io/npm/dm/captan.svg?color=green)](https://www.npmjs.com/package/captan)
+[![Release to npm](https://github.com/acossta/captan/actions/workflows/release.yml/badge.svg)](https://github.com/acossta/captan/actions/workflows/release.yml)
 [![GitHub stars](https://img.shields.io/github/stars/acossta/captan?style=social)](https://github.com/acossta/captan)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
