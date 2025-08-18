@@ -10,6 +10,7 @@ export interface FounderInput {
 
 export interface WizardResult {
   name: string;
+  formationDate: string;
   entityType: EntityType;
   jurisdiction: string;
   currency: string;
@@ -27,6 +28,11 @@ export async function runInitWizard(): Promise<WizardResult> {
   const name = await input({
     message: 'Company name:',
     default: 'Acme, Inc.',
+  });
+
+  const formationDate = await input({
+    message: 'Incorporation date (YYYY-MM-DD):',
+    default: new Date().toISOString().slice(0, 10),
   });
 
   const entityType = (await select({
@@ -136,6 +142,7 @@ export async function runInitWizard(): Promise<WizardResult> {
 
   return {
     name,
+    formationDate,
     entityType,
     jurisdiction,
     currency,
@@ -192,7 +199,7 @@ export function buildModelFromWizard(result: WizardResult): FileModel {
     company: {
       id: `comp_${randomUUID()}`,
       name: result.name,
-      formationDate: new Date().toISOString().slice(0, 10),
+      formationDate: result.formationDate,
       entityType: result.entityType,
       jurisdiction: result.jurisdiction,
       currency: result.currency,

@@ -38,6 +38,11 @@ program
   .option('--pool <qty>', 'option pool size (absolute number)')
   .option('--pool-pct <pct>', 'option pool as % of fully diluted')
   .option('-f, --founder <founder...>', 'founder(s) in format "Name:shares" or "Name:email:shares"')
+  .option(
+    '-d, --date <date>',
+    'incorporation date (YYYY-MM-DD)',
+    new Date().toISOString().slice(0, 10)
+  )
   .option('-w, --wizard', 'run interactive setup wizard')
   .action(async (opts) => {
     if (exists('captable.json')) {
@@ -68,7 +73,7 @@ program
         company: {
           id: `comp_${randomUUID()}`,
           name: opts.name || 'Untitled, Inc.',
-          formationDate: new Date().toISOString().slice(0, 10),
+          formationDate: opts.date,
           entityType,
           jurisdiction: opts.state || 'DE',
           currency: opts.currency || 'USD',
