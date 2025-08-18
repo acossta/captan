@@ -7,6 +7,7 @@
 
 # NPM release workflow
 - Create a branch for the release like `release/0.2.3`
+- Everything needs to be committed and pushed.
 - Use yarn release:patch | release:minor | release:mayor.
 - NEVER use `npm patch` or `npm publish` directly.
 - Monitor the github actions logs for `CI` and `Release to npm`
