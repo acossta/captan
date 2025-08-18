@@ -43,6 +43,7 @@ jobs:
           path-to-lcov: ./coverage/lcov.info
           parallel: true
           flag-name: node-${{ matrix.node-version }}
+        continue-on-error: true
     
   coverage:
     needs: test
