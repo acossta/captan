@@ -19,6 +19,10 @@ describe('Property-Based Testing', () => {
           fc.date({ min: new Date('1900-01-01'), max: new Date('2100-12-31') }),
           fc.date({ min: new Date('1900-01-01'), max: new Date('2100-12-31') }),
           (date1, date2) => {
+            // Skip invalid dates
+            if (isNaN(date1.getTime()) || isNaN(date2.getTime())) {
+              return;
+            }
             const iso1 = formatUTCDate(date1);
             const iso2 = formatUTCDate(date2);
             const result = monthsBetween(iso1, iso2);
