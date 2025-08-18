@@ -46,6 +46,8 @@ captan --help
 # 1. Initialize with founders and pool (C-Corp with 20% pool)
 captan init \
   --name "Acme, Inc." \
+  --date "2024-01-15" \
+  --authorized 10000000 \
   --founder "Alice Founder:alice@acme.com:5000000" \
   --founder "Bob Engineer:bob@acme.com:3000000" \
   --pool-pct 20
