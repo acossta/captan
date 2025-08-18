@@ -38,7 +38,7 @@ npm install -g captan
 captan --help
 ```
 
-> Requires Node.js 18+
+> Requires Node.js 20+
 
 ### One-minute flow
 
