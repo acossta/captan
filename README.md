@@ -66,6 +66,8 @@ captan chart
 captan export csv > captable.csv
 ```
 
+> 💡 **IDE Support**: Captan automatically creates `captable.schema.json` for autocomplete and validation in VS Code and other editors that support JSON Schema.
+
 ### Interactive Setup
 
 ```bash
@@ -129,6 +131,77 @@ Fully diluted total: 7000000
 - **Export CSV/JSON**
 - **Audit history** (the "ship's log")
 
+## 📋 JSON Schema & Validation
+
+Captan provides enterprise-grade JSON schema validation with comprehensive error checking and IDE integration.
+
+### ✨ Key Features
+
+- 🔍 **Format Validation**: Automatic validation of dates, emails, UUIDs, currency codes
+- 🧠 **Business Rules**: Cross-entity reference checking, authorized share limits, duplicate detection
+- 💡 **IDE Support**: Real-time autocomplete and validation in VS Code and other editors
+- ⚠️ **Smart Warnings**: Non-critical issues flagged separately from errors
+- 📊 **Enterprise Ready**: Handles complex cap tables with comprehensive validation
+
+### 🚀 Usage
+
+```bash
+# Basic validation - checks format and structure
+captan validate
+
+# Extended validation - includes business rules and cross-references
+captan validate --extended
+
+# Generate schema file for IDE integration
+captan schema --output captable.schema.json
+
+# Validate a specific file
+captan validate --file my-captable.json
+```
+
+### 💻 IDE Integration
+
+When you run `captan init`, a `captable.schema.json` file is automatically created in your directory. This enables:
+
+- **Autocomplete**: IntelliSense for all captable properties
+- **Real-time validation**: Immediate error highlighting
+- **Documentation**: Hover hints with field descriptions
+- **Type safety**: Prevents common data entry errors
+
+### 🎯 Validation Examples
+
+**Format validation:**
+```bash
+$ captan validate
+❌ Validation failed for captable.json:
+  • company.formationDate: Date must be in YYYY-MM-DD format
+  • stakeholders[0].email: Invalid email format
+  • company.currency: String must contain exactly 3 characters
+```
+
+**Business rule validation:**
+```bash
+$ captan validate --extended
+❌ Validation failed for captable.json:
+  • issuances[0].stakeholderId: Invalid stakeholder reference 'sh_nonexistent'
+  • securityClasses[0]: Issued shares (1,100,000) exceed authorized (1,000,000)
+
+⚠️ Warnings:
+  • stakeholders[2]: Stakeholder has no equity, options, or SAFEs
+  • safes[0]: SAFE has neither cap nor discount - conversion may be problematic
+```
+
+### 🔧 What Gets Validated
+
+| Category | Basic Mode | Extended Mode |
+|----------|------------|---------------|
+| **Format** | ✅ Dates, emails, UUIDs | ✅ All format validation |
+| **Structure** | ✅ Required fields, types | ✅ All structural validation |
+| **References** | ❌ | ✅ Stakeholder/security class refs |
+| **Business Rules** | ❌ | ✅ Share limits, duplicate IDs |
+| **Consistency** | ❌ | ✅ Date ordering, pool usage |
+| **Warnings** | ❌ | ✅ Orphaned entities, missing terms |
+
 ## 📖 Commands
 
 ### Core Commands
@@ -153,6 +226,9 @@ Fully diluted total: 7000000
 - `captan export json` - Export complete data as JSON
 - `captan export csv` - Export holdings as CSV
 - `captan log` - View audit trail
+- `captan validate` - Validate captable.json for errors
+- `captan validate --extended` - Extended validation with business rules
+- `captan schema` - Generate/export JSON schema file
 
 ## Concepts
 
@@ -248,6 +324,9 @@ All data lives in `captable.json` in your current directory:
 - Human-readable JSON format
 - Complete audit trail included
 - Works great alongside company docs in a repo
+- **JSON Schema support**: `captable.schema.json` provides IDE autocomplete and validation
+- **Built-in validation**: Run `captan validate` to catch errors before they cause problems
+- **Schema versioning**: Forward/backward compatibility with automatic migration guidance
 
 ## Advanced Usage
 
