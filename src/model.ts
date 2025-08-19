@@ -268,10 +268,10 @@ export function getEntityDefaults(entityType: EntityType) {
     case 'S_CORP':
       return {
         authorized: 10000000,
-        parValue: 0.0001,
+        parValue: 0.00001,
         unitsName: 'Shares',
         holderName: 'Stockholder',
-        poolPct: 20,
+        poolPct: 10,
       };
     case 'LLC':
       return {

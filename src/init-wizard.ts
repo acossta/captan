@@ -68,6 +68,7 @@ export async function runInitWizard(): Promise<WizardResult> {
     parValue = await number({
       message: 'Par value per share:',
       default: defaults.parValue,
+      step: 'any',
     });
   }
 
