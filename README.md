@@ -1,25 +1,30 @@
-# 🧭 Captan  
-**Command your ownership.**  
-Open Source Cap Table Management CLI
+<div align="center">
+  <img src="logo.png" alt="Captan Logo" width="120" height="120"/>
 
-[![npm version](https://img.shields.io/npm/v/captan.svg?color=blue&logo=npm)](https://www.npmjs.com/package/captan)
-[![Downloads](https://img.shields.io/npm/dm/captan.svg?color=green)](https://www.npmjs.com/package/captan)
-[![CI/CD](https://github.com/acossta/captan/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/acossta/captan/actions/workflows/main.yml)
-[![Coverage Status](https://coveralls.io/repos/github/acossta/captan/badge.svg?branch=main)](https://coveralls.io/github/acossta/captan?branch=main)
-[![GitHub stars](https://img.shields.io/github/stars/acossta/captan?style=social)](https://github.com/acossta/captan)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+  <h1>Captan</h1>
+
+  <p>Command your ownership.</p>
+  <h3>Open Source Cap Table Management CLI</h3>
+
+  [![npm version](https://img.shields.io/npm/v/captan.svg?color=blue&logo=npm)](https://www.npmjs.com/package/captan)
+  [![Downloads](https://img.shields.io/npm/dm/captan.svg?color=green)](https://www.npmjs.com/package/captan)
+  [![CI/CD](https://github.com/acossta/captan/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/acossta/captan/actions/workflows/main.yml)
+  [![Coverage Status](https://coveralls.io/repos/github/acossta/captan/badge.svg?branch=main)](https://coveralls.io/github/acossta/captan?branch=main)
+  [![GitHub stars](https://img.shields.io/github/stars/acossta/captan?style=social)](https://github.com/acossta/captan)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+</div>
 
 ---
 
 ## ✨ Overview
-Captan is a lightweight, hackable CLI tool for managing startup **cap tables**.  
-Keep ownership records simple and transparent with a single JSON file (`captable.json`).  
+Captan is a lightweight, hackable CLI tool for managing startup **cap tables**.
+Keep ownership records simple and transparent with a single JSON file (`captable.json`).
 
-- 🪶 Zero database required — just git & JSON  
-- 📊 Real cap table math: outstanding vs fully diluted  
-- ⏳ Simple vesting schedules with cliffs  
-- 📜 Audit log for every action  
-- 📤 Export to CSV/JSON for investors & lawyers  
+- 🪶 Zero database required — just git & JSON
+- 📊 Real cap table math: outstanding vs fully diluted
+- ⏳ Simple vesting schedules with cliffs
+- 📜 Audit log for every action
+- 📤 Export to CSV/JSON for investors & lawyers
 
 ---
 
@@ -83,13 +88,13 @@ captan safe \
   --holder sh_alice \
   --amount 100000 \
   --cap 5000000 \
-  --discount 0.8 \
+  --discount 20 \
   --note "YC SAFE"
 
 # List all SAFEs
 captan safes
 
-# Simulate SAFE conversion at Series A
+# Convert SAFEs at Series A (permanent - SAFEs become shares)
 captan convert \
   --pre-money 10000000 \
   --new-money 3000000 \
@@ -134,7 +139,7 @@ Fully diluted total: 7000000
 - `captan grant` - Grant options with vesting schedules
 - `captan safe` - Add a SAFE investment
 - `captan safes` - List all SAFEs
-- `captan convert` - Simulate SAFE conversion at a priced round
+- `captan convert` - Convert SAFEs to shares at a priced round (permanent)
 
 ### Reporting Commands
 - `captan chart` - Display cap table with ownership percentages
@@ -160,6 +165,82 @@ Options vest monthly with cliff periods:
 - Standard: 4 years (48 months) with 1-year cliff
 - Options don't count as outstanding until vested
 - Full grant counts toward fully diluted from day one
+
+### SAFE Conversions
+SAFEs (Simple Agreement for Future Equity) are placeholder investments that convert to shares at a priced round.
+
+#### How SAFEs Work:
+1. **Investment**: Investor provides capital via SAFE (not equity yet)
+2. **Terms**: SAFEs can have a valuation cap and/or discount
+3. **Conversion**: At next priced round, SAFEs convert to shares
+4. **Price**: Converts at the LOWEST of:
+   - **Round price**: The actual price per share
+   - **Cap price**: Valuation cap ÷ pre-money shares
+   - **Discount price**: Round price × (1 - discount%)
+5. **Permanent**: After conversion, SAFEs disappear - replaced by share issuances
+
+#### Pre-money vs Post-money SAFEs:
+- **Pre-money**: Cap applies to company value BEFORE the SAFE money
+- **Post-money**: Cap includes the SAFE investment itself (YC standard)
+
+#### Example SAFE Lifecycle:
+```bash
+# 1. Add SAFEs during seed stage
+captan safe --holder sh_angel --amount 50000 --cap 5000000 --discount 20
+captan safe --holder sh_vc --amount 150000 --cap 8000000
+
+# 2. Check outstanding SAFEs
+captan safes
+# Shows: $200k in SAFEs outstanding
+
+# 3. PREVIEW conversion (no changes made) - NEW!
+captan convert --pre-money 10000000 --pps 2.00 --dry-run
+
+# Output:
+# 🔄 SAFE Conversion Preview
+# 
+# Angel Investor:
+#   Investment: $50,000
+#   Shares: 31,250 at $1.60/share (discount)
+#   New ownership: 1.2%
+#
+# VC Fund:
+#   Investment: $150,000  
+#   Shares: 75,000 at $2.00/share (cap)
+#   New ownership: 2.8%
+#
+# Total new shares: 106,250
+# Post-money shares: 2,606,250
+# Dilution to existing: 4.1%
+
+# 4. EXECUTE conversion (permanent)
+captan convert --pre-money 10000000 --pps 2.00
+
+# Conversion calculation for sh_angel:
+# - Round price: $2.00
+# - Cap price: $5M ÷ 2.5M shares = $2.00  
+# - Discount price: $2.00 × 0.8 = $1.60 ← BEST PRICE
+# - Converts: $50k ÷ $1.60 = 31,250 shares
+
+# 5. SAFEs are now gone
+captan safes
+# Shows: No SAFEs outstanding
+
+captan chart
+# Shows: sh_angel now owns shares, not a SAFE
+```
+
+#### Simulating Different Conversion Scenarios:
+```bash
+# Test different valuations without committing
+captan convert --pre-money 8000000 --pps 1.60 --dry-run
+captan convert --pre-money 12000000 --pps 2.40 --dry-run
+captan convert --pre-money 15000000 --pps 3.00 --dry-run
+
+# Compare which pricing terms apply at different valuations
+# Higher valuations may trigger cap prices
+# Lower valuations may make discount prices more favorable
+```
 
 ### Data Storage
 All data lives in `captable.json` in your current directory:

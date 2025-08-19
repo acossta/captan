@@ -303,4 +303,45 @@ describe('SecurityService', () => {
       );
     });
   });
+
+  describe('updateAuthorized edge cases', () => {
+    it('should throw error when security class not found', () => {
+      expect(() => service.updateAuthorized('non-existent-id', 10000000)).toThrow(
+        'Security class with ID "non-existent-id" not found'
+      );
+    });
+  });
+
+  describe('listSecurityClasses', () => {
+    it('should return all security classes', () => {
+      const common = service.addSecurityClass('COMMON', 'Common Stock', 10000000);
+      const preferred = service.addSecurityClass('PREF', 'Preferred Stock', 5000000);
+      const pool = service.addSecurityClass('OPTION_POOL', 'Option Pool', 2000000);
+
+      const classes = service.listSecurityClasses();
+
+      expect(classes).toHaveLength(3);
+      expect(classes[0].id).toBe(common.id);
+      expect(classes[1].id).toBe(preferred.id);
+      expect(classes[2].id).toBe(pool.id);
+    });
+
+    it('should return empty array when no security classes', () => {
+      // Start with fresh model
+      model.securityClasses = [];
+      const classes = service.listSecurityClasses();
+      expect(classes).toEqual([]);
+    });
+
+    it('should return a copy of the array', () => {
+      service.addSecurityClass('COMMON', 'Common Stock', 10000000);
+      const classes1 = service.listSecurityClasses();
+      const classes2 = service.listSecurityClasses();
+
+      // Should be different array instances
+      expect(classes1).not.toBe(classes2);
+      // But have same content
+      expect(classes1).toEqual(classes2);
+    });
+  });
 });

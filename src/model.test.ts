@@ -698,4 +698,66 @@ describe('convertSAFE', () => {
     expect(result.sharesIssued).toBe(500000); // 1M / 2.0
     expect(result.conversionReason).toBe('cap');
   });
+
+  it('should handle post-money SAFE with zero existing shares edge case', () => {
+    const safe: SAFE = {
+      ...baseSAFE,
+      cap: 1000000,
+      type: 'post',
+    };
+    // Edge case: when existingShares is 0, falls back to round price
+    const result = convertSAFE(safe, 2.0, 0, true);
+    expect(result.conversionPrice).toBe(2.0); // Falls back to round price
+    expect(result.sharesIssued).toBe(50000); // 100000 / 2.0
+    expect(result.conversionReason).toBe('price');
+  });
+
+  it('should handle post-money SAFE with zero cap edge case', () => {
+    const safe: SAFE = {
+      ...baseSAFE,
+      cap: 0,
+      type: 'post',
+    };
+    // Edge case: when safeCap is 0, should use round price
+    const result = convertSAFE(safe, 2.0, 5000000, true);
+    expect(result.conversionPrice).toBe(2.0);
+    expect(result.sharesIssued).toBe(50000);
+    expect(result.conversionReason).toBe('price');
+  });
+
+  it('should handle post-money SAFE requiring max iterations', () => {
+    const safe: SAFE = {
+      ...baseSAFE,
+      amount: 10000000, // Very large amount
+      cap: 100000000,
+      type: 'post',
+    };
+    // This should trigger the max iterations path
+    const result = convertSAFE(safe, 100.0, 1000000, true);
+    expect(result.sharesIssued).toBeGreaterThan(0);
+    expect(result.conversionPrice).toBeGreaterThan(0);
+    expect(result.conversionReason).toBe('cap');
+  });
+
+  it('should handle SAFE with zero investment amount edge case', () => {
+    const safe: SAFE = {
+      ...baseSAFE,
+      amount: 0,
+      cap: 1000000,
+    };
+    const result = convertSAFE(safe, 2.0, 5000000);
+    expect(result.sharesIssued).toBe(0);
+    expect(result.conversionPrice).toBe(2.0);
+    expect(result.conversionReason).toBe('price');
+  });
+
+  it('should handle SAFE with zero price and no cap edge case', () => {
+    const safe: SAFE = {
+      ...baseSAFE,
+    };
+    const result = convertSAFE(safe, 0, 5000000);
+    expect(result.sharesIssued).toBe(0);
+    expect(result.conversionPrice).toBe(0);
+    expect(result.conversionReason).toBe('price');
+  });
 });
