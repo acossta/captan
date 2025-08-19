@@ -36,6 +36,38 @@ describe('init-wizard', () => {
     it('throws on invalid format', () => {
       expect(() => parseFounderString('Invalid')).toThrow('Invalid founder format');
     });
+
+    it('handles email with @ symbol', () => {
+      const result = parseFounderString('Eve:eve@company.com:4000000');
+      expect(result.name).toBe('Eve');
+      expect(result.email).toBe('eve@company.com');
+      expect(result.shares).toBe(4000000);
+    });
+
+    it('handles spaces in names', () => {
+      const result = parseFounderString('John Doe Smith:1500000');
+      expect(result.name).toBe('John Doe Smith');
+      expect(result.shares).toBe(1500000);
+    });
+
+    it('handles zero shares', () => {
+      const result = parseFounderString('Zero Guy:0');
+      expect(result.name).toBe('Zero Guy');
+      expect(result.shares).toBe(0);
+    });
+
+    it('handles non-numeric shares as zero', () => {
+      const result = parseFounderString('Bad:0');
+      expect(result.name).toBe('Bad');
+      expect(result.shares).toBe(0);
+    });
+
+    it('handles price in email format', () => {
+      const result = parseFounderString('Price Test:test@example.com:1000000@0.001');
+      expect(result.name).toBe('Price Test');
+      expect(result.email).toBe('test@example.com');
+      expect(result.shares).toBe(1000000);
+    });
   });
 
   describe('calculatePoolFromPercentage', () => {
@@ -63,6 +95,23 @@ describe('init-wizard', () => {
     it('handles 0% pool', () => {
       const pool = calculatePoolFromPercentage(10000000, 0);
       expect(pool).toBe(0);
+    });
+
+    it('handles 50% pool', () => {
+      const pool = calculatePoolFromPercentage(5000000, 50);
+      expect(pool).toBe(5000000);
+    });
+
+    it('handles very small percentages', () => {
+      const pool = calculatePoolFromPercentage(10000000, 0.1);
+      expect(pool).toBe(Math.round((10000000 * 0.001) / 0.999));
+    });
+
+    it('handles fractional results', () => {
+      const pool = calculatePoolFromPercentage(10000000, 15);
+      // 15% of total means pool / (pool + 10M) = 0.15
+      // pool = 10M * 0.15 / (1 - 0.15) = 1764705.88...
+      expect(pool).toBe(1764705);
     });
   });
 
@@ -180,6 +229,119 @@ describe('init-wizard', () => {
       // Pool still created
       const pool = model.securityClasses.find((sc) => sc.kind === 'OPTION_POOL');
       expect(pool?.authorized).toBe(1000000);
+    });
+
+    it('builds S-Corp model correctly', () => {
+      const result = {
+        name: 'Test S-Corp',
+        entityType: 'S_CORP' as EntityType,
+        jurisdiction: 'NY',
+        currency: 'USD',
+        authorized: 5000000,
+        parValue: 0.001,
+        poolSize: 500000,
+        poolPct: undefined,
+        founders: [{ name: 'Sarah', shares: 4500000 }],
+      };
+
+      const model = buildModelFromWizard(result);
+
+      expect(model.company.entityType).toBe('S_CORP');
+
+      const common = model.securityClasses.find((sc) => sc.kind === 'COMMON');
+      expect(common?.label).toBe('Common Stock');
+      expect(common?.parValue).toBe(0.001);
+
+      const pool = model.securityClasses.find((sc) => sc.kind === 'OPTION_POOL');
+      expect(pool?.authorized).toBe(500000);
+    });
+
+    it('handles no pool for non-corp entities', () => {
+      const result = {
+        name: 'No Pool LLC',
+        entityType: 'LLC' as EntityType,
+        jurisdiction: 'TX',
+        currency: 'USD',
+        authorized: 2000000,
+        parValue: undefined,
+        poolSize: 0,
+        poolPct: 0,
+        founders: [{ name: 'Mike', shares: 2000000 }],
+      };
+
+      const model = buildModelFromWizard(result);
+
+      const pool = model.securityClasses.find((sc) => sc.kind === 'OPTION_POOL');
+      expect(pool).toBeUndefined();
+    });
+
+    it('handles founders with email and without email mixed', () => {
+      const result = {
+        name: 'Mixed Corp',
+        entityType: 'C_CORP' as EntityType,
+        jurisdiction: 'DE',
+        currency: 'EUR',
+        authorized: 10000000,
+        parValue: 0.0001,
+        poolSize: undefined,
+        poolPct: 10,
+        founders: [
+          { name: 'Alice', email: 'alice@test.com', shares: 3000000 },
+          { name: 'Bob', shares: 2000000 },
+          { name: 'Charlie', email: 'charlie@test.com', shares: 4000000 },
+        ],
+      };
+
+      const model = buildModelFromWizard(result);
+
+      expect(model.stakeholders).toHaveLength(3);
+      expect(model.stakeholders[0].email).toBe('alice@test.com');
+      expect(model.stakeholders[1].email).toBeUndefined();
+      expect(model.stakeholders[2].email).toBe('charlie@test.com');
+
+      expect(model.issuances).toHaveLength(3);
+      expect(model.issuances.reduce((sum, i) => sum + i.qty, 0)).toBe(9000000);
+
+      const pool = model.securityClasses.find((sc) => sc.kind === 'OPTION_POOL');
+      expect(pool?.authorized).toBe(1000000); // 10% of total
+    });
+
+    it('handles both poolSize and poolPct with poolSize taking precedence', () => {
+      const result = {
+        name: 'Both Pool Corp',
+        entityType: 'C_CORP' as EntityType,
+        jurisdiction: 'DE',
+        currency: 'USD',
+        authorized: 10000000,
+        parValue: 0.0001,
+        poolSize: 3000000, // This should take precedence
+        poolPct: 20, // This would be 2000000 if calculated
+        founders: [{ name: 'Dan', shares: 7000000 }],
+      };
+
+      const model = buildModelFromWizard(result);
+
+      const pool = model.securityClasses.find((sc) => sc.kind === 'OPTION_POOL');
+      expect(pool?.authorized).toBe(3000000); // poolSize takes precedence
+    });
+
+    it('includes formationDate in wizard result', () => {
+      const result = {
+        name: 'Date Corp',
+        formationDate: '2024-06-15',
+        entityType: 'C_CORP' as EntityType,
+        jurisdiction: 'DE',
+        currency: 'USD',
+        authorized: 10000000,
+        parValue: 0.0001,
+        poolSize: undefined,
+        poolPct: undefined,
+        founders: [],
+      };
+
+      const model = buildModelFromWizard(result);
+
+      expect(model.company.formationDate).toBe('2024-06-15');
     });
   });
 });

@@ -260,5 +260,37 @@ describe('EquityService', () => {
         'No common stock class found for option exercise'
       );
     });
+
+    it('should throw error when grant not found', () => {
+      expect(() => service.exerciseOptions('invalid-grant-id', 100, '2025-01-01')).toThrow(
+        'Grant with ID "invalid-grant-id" not found'
+      );
+    });
+  });
+
+  describe('getIssuancesBySecurityClass', () => {
+    it('should return all issuances for a security class', () => {
+      service.issueShares(commonId, aliceId, 1000000);
+      service.issueShares(commonId, bobId, 500000);
+
+      // Create a preferred stock class
+      const preferred = securityService.addSecurityClass('PREF', 'Preferred Stock', 1000000, 0.001);
+      service.issueShares(preferred.id, aliceId, 250000);
+
+      const commonIssuances = service.getIssuancesBySecurityClass(commonId);
+      const preferredIssuances = service.getIssuancesBySecurityClass(preferred.id);
+
+      expect(commonIssuances).toHaveLength(2);
+      expect(commonIssuances[0].qty).toBe(1000000);
+      expect(commonIssuances[1].qty).toBe(500000);
+
+      expect(preferredIssuances).toHaveLength(1);
+      expect(preferredIssuances[0].qty).toBe(250000);
+    });
+
+    it('should return empty array for security class with no issuances', () => {
+      const issuances = service.getIssuancesBySecurityClass('non-existent-class');
+      expect(issuances).toEqual([]);
+    });
   });
 });

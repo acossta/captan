@@ -106,6 +106,62 @@ describe('ReportingService', () => {
       expect(lines[1]).toContain('Alice');
       expect(csv).not.toContain('Bob');
     });
+
+    it('should include SAFEs in CSV export', () => {
+      equityService.issueShares(commonId, aliceId, 1000000, 0.0001, '2024-01-01');
+      // Add SAFE to the model
+      model.safes.push({
+        id: 'safe_001',
+        stakeholderId: bobId,
+        amount: 250000,
+        cap: 5000000,
+        discount: 0.8,
+        date: '2024-03-01',
+        note: 'Seed SAFE',
+      });
+
+      const csv = service.exportCSV(true);
+      const lines = csv.split('\n');
+
+      expect(lines[0]).toBe(
+        'stakeholder_name,stakeholder_id,type,security_class,quantity,price_per_share,date'
+      );
+      expect(lines[1]).toContain('Alice');
+      expect(lines[1]).toContain('ISSUANCE');
+
+      // Check SAFE is included
+      expect(lines[2]).toContain('Bob');
+      expect(lines[2]).toContain('SAFE');
+      expect(lines[2]).toContain('Seed SAFE');
+      expect(lines[2]).toContain('250000');
+      expect(lines[2]).toContain('5000000');
+      expect(lines[2]).toContain('2024-03-01');
+    });
+
+    it('should handle SAFEs without cap or note fields', () => {
+      // Start fresh to avoid interference from previous test
+      model.safes = [];
+      // Add SAFE without optional fields
+      model.safes.push({
+        id: 'safe_002',
+        stakeholderId: aliceId,
+        amount: 100000,
+        date: '2024-04-01',
+      });
+
+      const csv = service.exportCSV(true);
+      const lines = csv.split('\n');
+
+      // Should have header plus one SAFE line
+      expect(lines.length).toBeGreaterThanOrEqual(2);
+      expect(lines[1]).toContain('Alice');
+      expect(lines[1]).toContain('SAFE');
+      expect(lines[1]).toContain('100000');
+      expect(lines[1]).toContain('2024-04-01');
+      // Should have empty field for missing cap
+      const parts = lines[1].split(',');
+      expect(parts[5]).toBe(''); // Cap field should be empty
+    });
   });
 
   describe('generateSummary', () => {
