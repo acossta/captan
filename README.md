@@ -1,25 +1,30 @@
-# 🧭 Captan  
-**Command your ownership.**  
-Open Source Cap Table Management CLI
+<div align="center">
+  <img src="logo.png" alt="Captan Logo" width="120" height="120"/>
 
-[![npm version](https://img.shields.io/npm/v/captan.svg?color=blue&logo=npm)](https://www.npmjs.com/package/captan)
-[![Downloads](https://img.shields.io/npm/dm/captan.svg?color=green)](https://www.npmjs.com/package/captan)
-[![CI/CD](https://github.com/acossta/captan/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/acossta/captan/actions/workflows/main.yml)
-[![Coverage Status](https://coveralls.io/repos/github/acossta/captan/badge.svg?branch=main)](https://coveralls.io/github/acossta/captan?branch=main)
-[![GitHub stars](https://img.shields.io/github/stars/acossta/captan?style=social)](https://github.com/acossta/captan)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+  <h1>Captan</h1>
+
+  <p>Command your ownership.</p>
+  <h3>Open Source Cap Table Management CLI</h3>
+
+  [![npm version](https://img.shields.io/npm/v/captan.svg?color=blue&logo=npm)](https://www.npmjs.com/package/captan)
+  [![Downloads](https://img.shields.io/npm/dm/captan.svg?color=green)](https://www.npmjs.com/package/captan)
+  [![CI/CD](https://github.com/acossta/captan/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/acossta/captan/actions/workflows/main.yml)
+  [![Coverage Status](https://coveralls.io/repos/github/acossta/captan/badge.svg?branch=main)](https://coveralls.io/github/acossta/captan?branch=main)
+  [![GitHub stars](https://img.shields.io/github/stars/acossta/captan?style=social)](https://github.com/acossta/captan)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+</div>
 
 ---
 
 ## ✨ Overview
-Captan is a lightweight, hackable CLI tool for managing startup **cap tables**.  
-Keep ownership records simple and transparent with a single JSON file (`captable.json`).  
+Captan is a lightweight, hackable CLI tool for managing startup **cap tables**.
+Keep ownership records simple and transparent with a single JSON file (`captable.json`).
 
-- 🪶 Zero database required — just git & JSON  
-- 📊 Real cap table math: outstanding vs fully diluted  
-- ⏳ Simple vesting schedules with cliffs  
-- 📜 Audit log for every action  
-- 📤 Export to CSV/JSON for investors & lawyers  
+- 🪶 Zero database required — just git & JSON
+- 📊 Real cap table math: outstanding vs fully diluted
+- ⏳ Simple vesting schedules with cliffs
+- 📜 Audit log for every action
+- 📤 Export to CSV/JSON for investors & lawyers
 
 ---
 
