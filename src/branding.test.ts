@@ -13,6 +13,6 @@ describe('Branding', () => {
   it('should export LOGO constant with correct format', () => {
     expect(LOGO).toContain(NAME);
     expect(LOGO).toContain(TAGLINE);
-    expect(LOGO).toContain('🧭');
+    expect(LOGO).toContain('☸️');
   });
 });
