@@ -170,6 +170,13 @@ describe('CLI Handlers', () => {
         conversionReason: 'cap',
         stakeholderName: 'Alice',
       },
+      {
+        stakeholderId: 'sh_bob',
+        sharesIssued: 62500,
+        conversionPrice: 1.6,
+        conversionReason: 'discount',
+        stakeholderName: 'Bob',
+      },
     ]);
 
     // Reset EquityService mock for convert tests
@@ -824,6 +831,128 @@ describe('CLI Handlers', () => {
       });
 
       expect(result.success).toBe(true);
+    });
+
+    it('should preview conversion with --dry-run without modifying data', () => {
+      const result = handlers.handleConvert({
+        price: '2.0',
+        dryRun: true,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.message).toContain('SAFE Conversion Preview');
+      expect(result.message).toContain('Investment:');
+      expect(result.message).toContain('New ownership:');
+      expect(result.message).toContain('Total new shares:');
+      expect(result.message).toContain('Dilution to existing:');
+
+      // Verify no actual conversion happened
+      expect(store.save).not.toHaveBeenCalled();
+      expect(mockEquityService.issueShares).not.toHaveBeenCalled();
+      expect(mockModel.safes).toHaveLength(2); // SAFEs still exist
+    });
+
+    it('should calculate ownership percentages in dry-run', () => {
+      // Set up existing shares
+      mockModel.issuances = [
+        {
+          id: 'is_1',
+          securityClassId: 'sc_common',
+          stakeholderId: 'sh_founder',
+          qty: 2500000,
+          pps: 0.001,
+        },
+      ];
+      mockModel.securityClasses = [
+        { id: 'sc_common', kind: 'COMMON', label: 'Common Stock', authorized: 10000000 },
+      ];
+
+      const result = handlers.handleConvert({
+        price: '2.0',
+        dryRun: true,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.data).toHaveProperty('totalNewShares');
+      expect(result.data).toHaveProperty('postMoneyShares');
+      expect(result.data).toHaveProperty('dilution');
+      expect(result.message).toMatch(/\d+\.\d+%/); // Contains percentage
+    });
+
+    it('should show conversion reason (cap/discount/price) in dry-run', () => {
+      // Set up existing shares for cap price calculation
+      mockModel.issuances = [
+        {
+          id: 'is_1',
+          securityClassId: 'sc_common',
+          stakeholderId: 'sh_founder',
+          qty: 2500000,
+          pps: 0.001,
+        },
+      ];
+      mockModel.securityClasses = [
+        { id: 'sc_common', kind: 'COMMON', label: 'Common Stock', authorized: 10000000 },
+      ];
+
+      // SAFE with cap should use cap price
+      mockModel.safes[0].cap = 2500000; // Low cap to trigger cap price
+
+      const result = handlers.handleConvert({
+        price: '2.0',
+        dryRun: true,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.message).toContain('Alice'); // Alice's SAFE
+      expect(result.message).toContain('Bob'); // Bob's SAFE
+      expect(result.message).toContain('(cap)'); // Alice uses cap
+      expect(result.message).toContain('(discount)'); // Bob uses discount
+    });
+
+    it('should handle no SAFEs to convert', () => {
+      mockModel.safes = [];
+
+      const result = handlers.handleConvert({
+        price: '2.0',
+        dryRun: true,
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('No SAFEs to convert');
+    });
+
+    it('should execute actual conversion without dry-run', () => {
+      const result = handlers.handleConvert({
+        price: '2.0',
+        dryRun: false,
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.message).toContain('SAFE Conversions Executed');
+      expect(store.save).toHaveBeenCalled();
+      expect(mockEquityService.issueShares).toHaveBeenCalled();
+      expect(mockModel.safes).toHaveLength(0); // SAFEs cleared
+    });
+
+    it('should calculate price from pre-money valuation in dry-run', () => {
+      mockModel.issuances = [
+        {
+          id: 'is_1',
+          securityClassId: 'sc_common',
+          stakeholderId: 'sh_founder',
+          qty: 5000000,
+          pps: 0.001,
+        },
+      ];
+
+      const result = handlers.handleConvert({
+        preMoney: '10000000', // $10M pre-money
+        dryRun: true,
+      });
+
+      expect(result.success).toBe(true);
+      // Price should be $10M / 5M shares = $2.00
+      expect(result.message).toContain('$2.00/share');
     });
   });
 

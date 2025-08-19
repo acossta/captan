@@ -99,6 +99,7 @@ export interface ConvertOptions {
   newMoney?: string;
   date?: string;
   postMoney?: boolean;
+  dryRun?: boolean;
 }
 
 // Handler functions
@@ -666,6 +667,14 @@ export function handleConvert(options: ConvertOptions): CommandResult {
     const safeService = new SAFEService(model);
     const stakeholderService = new StakeholderService(model);
 
+    // Check if there are any SAFEs to convert
+    if (model.safes.length === 0) {
+      return {
+        success: false,
+        message: '❌ No SAFEs to convert',
+      };
+    }
+
     // Calculate price per share if not provided directly
     let pricePerShare: number;
     if (options.price) {
@@ -687,68 +696,111 @@ export function handleConvert(options: ConvertOptions): CommandResult {
       throw new Error('Must provide either --price or --pre-money');
     }
 
-    // Since SAFEService doesn't have convertSAFEs, we need to simulate conversion
+    // Simulate conversion to get the results
     const conversions = safeService.simulateConversion({
       preMoneyValuation: options.preMoney ? Number(options.preMoney) : 0,
       newMoneyRaised: options.newMoney ? Number(options.newMoney) : 0,
       pricePerShare,
     });
 
-    // Convert SAFEs and update the model
-    const securityService = new SecurityService(model);
-    const equityService = new EquityService(model);
-    const commonClasses = securityService.listByKind('COMMON');
+    // Calculate ownership percentages
+    const currentShares = model.issuances.reduce((sum, issuance) => {
+      const securityClass = model.securityClasses.find((sc) => sc.id === issuance.securityClassId);
+      if (securityClass && securityClass.kind !== 'OPTION_POOL') {
+        return sum + issuance.qty;
+      }
+      return sum;
+    }, 0);
 
-    if (commonClasses.length === 0) {
-      throw new Error('No common stock class found for SAFE conversion');
+    const totalNewShares = conversions.reduce((sum, c) => sum + c.sharesIssued, 0);
+    const postMoneyShares = currentShares + totalNewShares;
+    const dilution = (totalNewShares / postMoneyShares) * 100;
+
+    if (options.dryRun) {
+      // Preview mode - don't actually convert
+      const output: string[] = ['🔄 SAFE Conversion Preview\n'];
+
+      for (const conversion of conversions) {
+        const stakeholder = stakeholderService.getStakeholder(conversion.stakeholderId);
+        const safe = model.safes.find((s) => s.stakeholderId === conversion.stakeholderId);
+        const ownershipPct = (conversion.sharesIssued / postMoneyShares) * 100;
+
+        output.push(`${stakeholder?.name || conversion.stakeholderId}:`);
+        output.push(`  Investment: $${safe?.amount.toLocaleString()}`);
+        output.push(
+          `  Shares: ${conversion.sharesIssued.toLocaleString()} at $${conversion.conversionPrice.toFixed(2)}/share (${conversion.conversionReason})`
+        );
+        output.push(`  New ownership: ${ownershipPct.toFixed(2)}%`);
+        output.push('');
+      }
+
+      output.push(`Total new shares: ${totalNewShares.toLocaleString()}`);
+      output.push(`Post-money shares: ${postMoneyShares.toLocaleString()}`);
+      output.push(`Dilution to existing: ${dilution.toFixed(2)}%`);
+
+      return {
+        success: true,
+        message: output.join('\n'),
+        data: { conversions, totalNewShares, postMoneyShares, dilution },
+      };
+    } else {
+      // Actual conversion mode - execute the conversion
+      const securityService = new SecurityService(model);
+      const equityService = new EquityService(model);
+      const commonClasses = securityService.listByKind('COMMON');
+
+      if (commonClasses.length === 0) {
+        throw new Error('No common stock class found for SAFE conversion');
+      }
+
+      const commonClass = commonClasses[0];
+      const issuedConversions: Array<{
+        stakeholderId: string;
+        sharesIssued: number;
+        conversionPrice: number;
+        conversionReason: string;
+      }> = [];
+
+      for (const conversion of conversions) {
+        // Issue shares for the conversion
+        equityService.issueShares(
+          commonClass.id,
+          conversion.stakeholderId,
+          conversion.sharesIssued,
+          conversion.conversionPrice,
+          options.date
+        );
+
+        issuedConversions.push({
+          stakeholderId: conversion.stakeholderId,
+          sharesIssued: conversion.sharesIssued,
+          conversionPrice: conversion.conversionPrice,
+          conversionReason: conversion.conversionReason,
+        });
+      }
+
+      // Remove converted SAFEs
+      model.safes = [];
+
+      const output: string[] = ['🔄 SAFE Conversions Executed\n'];
+      for (const conversion of issuedConversions) {
+        const stakeholder = stakeholderService.getStakeholder(conversion.stakeholderId);
+        const ownershipPct = (conversion.sharesIssued / postMoneyShares) * 100;
+        output.push(
+          `  ${stakeholder?.name || conversion.stakeholderId}: ${conversion.sharesIssued.toLocaleString()} shares at $${conversion.conversionPrice.toFixed(2)}/share (${conversion.conversionReason}) - ${ownershipPct.toFixed(2)}% ownership`
+        );
+      }
+
+      output.push(`\nTotal dilution: ${dilution.toFixed(2)}%`);
+
+      store.save(model);
+
+      return {
+        success: true,
+        message: output.join('\n'),
+        data: issuedConversions,
+      };
     }
-
-    const commonClass = commonClasses[0];
-    const issuedConversions: Array<{
-      stakeholderId: string;
-      sharesIssued: number;
-      conversionPrice: number;
-      conversionReason: string;
-    }> = [];
-
-    for (const conversion of conversions) {
-      // Issue shares for the conversion
-      equityService.issueShares(
-        commonClass.id,
-        conversion.stakeholderId,
-        conversion.sharesIssued,
-        conversion.conversionPrice,
-        options.date
-      );
-
-      issuedConversions.push({
-        stakeholderId: conversion.stakeholderId,
-        sharesIssued: conversion.sharesIssued,
-        conversionPrice: conversion.conversionPrice,
-        conversionReason: conversion.conversionReason,
-      });
-    }
-
-    // Remove converted SAFEs
-    model.safes = [];
-
-    const output: string[] = ['🔄 SAFE Conversions\n'];
-    for (const conversion of issuedConversions) {
-      const stakeholder = stakeholderService.getStakeholder(conversion.stakeholderId);
-      output.push(
-        `  ${stakeholder?.name || conversion.stakeholderId}: ${conversion.sharesIssued.toLocaleString()} shares at $${
-          conversion.conversionPrice
-        }/share (${conversion.conversionReason})`
-      );
-    }
-
-    store.save(model);
-
-    return {
-      success: true,
-      message: output.join('\n'),
-      data: issuedConversions,
-    };
   } catch (error) {
     return {
       success: false,

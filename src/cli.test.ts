@@ -230,6 +230,53 @@ describe('CLI Integration Tests', () => {
     });
   });
 
+  describe('SAFE conversion', () => {
+    beforeEach(() => {
+      runCLI('init --name "TestCo" --authorized 10000000');
+      runCLI('enlist stakeholder --name "Angel Investor" --email angel@test.com');
+      runCLI('enlist stakeholder --name "VC Fund" --email vc@test.com --entity');
+
+      const model = JSON.parse(fs.readFileSync(testFile, 'utf8'));
+      const angelId = model.stakeholders.find((s: any) => s.name === 'Angel Investor').id;
+      const vcId = model.stakeholders.find((s: any) => s.name === 'VC Fund').id;
+
+      // Add SAFEs
+      runCLI(`safe --holder ${angelId} --amount 50000 --cap 5000000 --discount 20`);
+      runCLI(`safe --holder ${vcId} --amount 150000 --cap 8000000`);
+    });
+
+    it('should preview SAFE conversion with --dry-run', () => {
+      const output = runCLI('convert --pre-money 10000000 --pps 2.00 --dry-run');
+
+      expect(output).toContain('SAFE Conversion Preview');
+      expect(output).toContain('Angel Investor');
+      expect(output).toContain('VC Fund');
+      expect(output).toContain('Investment: $');
+      expect(output).toContain('New ownership:');
+      expect(output).toContain('Total new shares:');
+      expect(output).toContain('Dilution to existing:');
+
+      // Verify SAFEs still exist after dry-run
+      const model = JSON.parse(fs.readFileSync(testFile, 'utf8'));
+      expect(model.safes).toHaveLength(2);
+      expect(model.issuances).toHaveLength(0); // No shares issued
+    });
+
+    it('should execute actual SAFE conversion without --dry-run', () => {
+      const output = runCLI('convert --pre-money 10000000 --pps 2.00');
+
+      expect(output).toContain('SAFE Conversions Executed');
+      expect(output).toContain('Angel Investor');
+      expect(output).toContain('VC Fund');
+      expect(output).toContain('ownership');
+
+      // Verify SAFEs are gone and shares are issued
+      const model = JSON.parse(fs.readFileSync(testFile, 'utf8'));
+      expect(model.safes).toHaveLength(0); // SAFEs cleared
+      expect(model.issuances.length).toBeGreaterThan(0); // Shares issued
+    });
+  });
+
   describe('error handling', () => {
     beforeEach(() => {
       runCLI('init');

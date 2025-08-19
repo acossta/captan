@@ -215,6 +215,7 @@ program
     new Date().toISOString().slice(0, 10)
   )
   .option('--post-money', 'use post-money calculation')
+  .option('--dry-run', 'preview conversion without executing')
   .action((opts) => {
     // Use pps or price, whichever is provided
     const price = opts.pps || opts.price;
@@ -228,6 +229,7 @@ program
       newMoney: opts.newMoney,
       date: opts.date,
       postMoney: opts.postMoney,
+      dryRun: opts.dryRun,
     };
     const result = handlers.handleConvert(mappedOpts);
     if (!result.success) {
