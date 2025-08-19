@@ -6,95 +6,152 @@ export type Kind = 'COMMON' | 'PREF' | 'OPTION_POOL';
 
 export type EntityType = 'C_CORP' | 'S_CORP' | 'LLC';
 
+// Custom Zod types with format validation
+export const ISODateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
+  .refine((dateStr) => {
+    const date = new Date(dateStr + 'T00:00:00.000Z');
+    return !isNaN(date.getTime()) && date.toISOString().startsWith(dateStr);
+  }, 'Invalid date');
+
+export const UUIDSchema = z
+  .string()
+  .regex(
+    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/,
+    'Invalid UUID format'
+  );
+
+// More flexible ID schema that allows existing patterns:
+// - Hardcoded IDs like 'sc_common', 'sc_pool'
+// - Generated IDs like 'sh_UUID', 'is_UUID'
+export const PrefixedIdSchema = z
+  .string()
+  .regex(/^[a-z]+_[a-zA-Z0-9-]+$/, 'ID must be in format: prefix_identifier');
+
+export const CurrencyCodeSchema = z
+  .string()
+  .length(3)
+  .regex(/^[A-Z]{3}$/, 'Currency must be a 3-letter ISO 4217 code (e.g., USD, EUR)');
+
+export const EmailSchema = z.string().email('Invalid email address');
+
+export const PercentageSchema = z
+  .number()
+  .min(0, 'Percentage must be between 0 and 1')
+  .max(1, 'Percentage must be between 0 and 1');
+
 export const VestingSchema = z.object({
-  start: z.string(),
-  monthsTotal: z.number().int().positive(),
-  cliffMonths: z.number().int().nonnegative(),
+  start: ISODateSchema.describe('Vesting start date in YYYY-MM-DD format'),
+  monthsTotal: z.number().int().positive().describe('Total vesting period in months'),
+  cliffMonths: z.number().int().nonnegative().describe('Cliff period in months'),
 });
 
 export type Vesting = z.infer<typeof VestingSchema>;
 
 export const StakeholderSchema = z.object({
-  id: z.string(),
-  type: z.enum(['person', 'entity']),
-  name: z.string().min(1),
-  email: z.string().email().optional(),
+  id: PrefixedIdSchema.describe('Unique stakeholder identifier'),
+  type: z.enum(['person', 'entity']).describe('Type of stakeholder'),
+  name: z.string().min(1).describe('Full name or entity name'),
+  email: EmailSchema.optional().describe('Contact email address'),
 });
 
 export type Stakeholder = z.infer<typeof StakeholderSchema>;
 
 export const SecurityClassSchema = z.object({
-  id: z.string(),
-  kind: z.enum(['COMMON', 'PREF', 'OPTION_POOL']),
-  label: z.string().min(1),
-  parValue: z.number().optional(),
-  authorized: z.number().positive(),
+  id: PrefixedIdSchema.describe('Unique security class identifier'),
+  kind: z.enum(['COMMON', 'PREF', 'OPTION_POOL']).describe('Type of security'),
+  label: z.string().min(1).describe('Human-readable label for the security class'),
+  parValue: z.number().optional().describe('Par value per share'),
+  authorized: z.number().positive().describe('Total authorized shares'),
 });
 
 export type SecurityClass = z.infer<typeof SecurityClassSchema>;
 
 export const IssuanceSchema = z.object({
-  id: z.string(),
-  securityClassId: z.string(),
-  stakeholderId: z.string(),
-  qty: z.number().positive(),
-  pps: z.number().nonnegative().optional(),
-  date: z.string(),
-  cert: z.string().optional(),
+  id: PrefixedIdSchema.describe('Unique issuance identifier'),
+  securityClassId: PrefixedIdSchema.describe('Reference to security class'),
+  stakeholderId: PrefixedIdSchema.describe('Reference to stakeholder'),
+  qty: z.number().positive().describe('Number of shares issued'),
+  pps: z.number().nonnegative().optional().describe('Price per share at issuance'),
+  date: ISODateSchema.describe('Issuance date in YYYY-MM-DD format'),
+  cert: z.string().optional().describe('Certificate number'),
 });
 
 export type Issuance = z.infer<typeof IssuanceSchema>;
 
 export const OptionGrantSchema = z.object({
-  id: z.string(),
-  stakeholderId: z.string(),
-  qty: z.number().positive(),
-  exercise: z.number().positive(),
-  grantDate: z.string(),
-  vesting: VestingSchema.optional(),
+  id: PrefixedIdSchema.describe('Unique option grant identifier'),
+  stakeholderId: PrefixedIdSchema.describe('Reference to stakeholder'),
+  qty: z.number().positive().describe('Number of options granted'),
+  exercise: z.number().positive().describe('Exercise price per option'),
+  grantDate: ISODateSchema.describe('Grant date in YYYY-MM-DD format'),
+  vesting: VestingSchema.optional().describe('Vesting schedule'),
 });
 
 export type OptionGrant = z.infer<typeof OptionGrantSchema>;
 
 export const SAFESchema = z.object({
-  id: z.string(),
-  stakeholderId: z.string(),
-  amount: z.number().positive(),
-  date: z.string(),
-  cap: z.number().positive().optional(),
-  discount: z.number().min(0).max(1).optional(),
-  type: z.enum(['pre', 'post']).optional(),
-  note: z.string().optional(),
+  id: PrefixedIdSchema.describe('Unique SAFE identifier'),
+  stakeholderId: PrefixedIdSchema.describe('Reference to stakeholder'),
+  amount: z.number().positive().describe('Investment amount'),
+  date: ISODateSchema.describe('Investment date in YYYY-MM-DD format'),
+  cap: z.number().positive().optional().describe('Valuation cap'),
+  discount: PercentageSchema.optional().describe('Discount rate (0-1)'),
+  type: z.enum(['pre', 'post']).optional().describe('Pre-money or post-money SAFE'),
+  note: z.string().optional().describe('Additional notes'),
 });
 
 export type SAFE = z.infer<typeof SAFESchema>;
 
+export const ValuationSchema = z.object({
+  id: PrefixedIdSchema.describe('Unique valuation identifier'),
+  date: ISODateSchema.describe('Valuation date in YYYY-MM-DD format'),
+  type: z
+    .enum(['409a', 'common', 'preferred', 'series_a', 'series_b', 'series_c', 'other'])
+    .describe('Type of valuation'),
+  preMoney: z.number().nonnegative().optional().describe('Pre-money valuation amount'),
+  postMoney: z.number().nonnegative().optional().describe('Post-money valuation amount'),
+  sharePrice: z.number().positive().optional().describe('Share price from valuation'),
+  methodology: z.string().optional().describe('Valuation methodology used'),
+  provider: z.string().optional().describe('Valuation provider or firm'),
+  note: z.string().optional().describe('Additional notes'),
+});
+
+export type Valuation = z.infer<typeof ValuationSchema>;
+
 export const AuditEntrySchema = z.object({
-  ts: z.string(),
-  by: z.string(),
-  action: z.string(),
-  data: z.any(),
+  ts: z.string().describe('Timestamp in ISO 8601 format'),
+  by: z.string().describe('User or system that performed the action'),
+  action: z.string().describe('Action performed'),
+  data: z.any().describe('Additional data related to the action'),
 });
 
 export type AuditEntry = z.infer<typeof AuditEntrySchema>;
 
 export const FileModelSchema = z.object({
-  version: z.number(),
-  company: z.object({
-    id: z.string(),
-    name: z.string(),
-    formationDate: z.string().optional(),
-    entityType: z.enum(['C_CORP', 'S_CORP', 'LLC']).optional(),
-    jurisdiction: z.string().optional(),
-    currency: z.string().optional(),
-  }),
-  stakeholders: z.array(StakeholderSchema),
-  securityClasses: z.array(SecurityClassSchema),
-  issuances: z.array(IssuanceSchema),
-  optionGrants: z.array(OptionGrantSchema),
-  safes: z.array(SAFESchema),
-  valuations: z.array(z.any()),
-  audit: z.array(AuditEntrySchema),
+  version: z.number().describe('Schema version number'),
+  company: z
+    .object({
+      id: PrefixedIdSchema.describe('Unique company identifier'),
+      name: z.string().describe('Legal company name'),
+      formationDate: ISODateSchema.optional().describe(
+        'Company formation date in YYYY-MM-DD format'
+      ),
+      entityType: z.enum(['C_CORP', 'S_CORP', 'LLC']).optional().describe('Type of legal entity'),
+      jurisdiction: z.string().optional().describe('Jurisdiction of incorporation (e.g., DE, CA)'),
+      currency: CurrencyCodeSchema.optional().describe(
+        'Primary currency for transactions (ISO 4217)'
+      ),
+    })
+    .describe('Company information'),
+  stakeholders: z.array(StakeholderSchema).describe('List of all stakeholders'),
+  securityClasses: z.array(SecurityClassSchema).describe('List of security classes'),
+  issuances: z.array(IssuanceSchema).describe('List of share issuances'),
+  optionGrants: z.array(OptionGrantSchema).describe('List of option grants'),
+  safes: z.array(SAFESchema).describe('List of SAFE instruments'),
+  valuations: z.array(ValuationSchema).describe('List of company valuations'),
+  audit: z.array(AuditEntrySchema).describe('Audit trail of all changes'),
 });
 
 export type FileModel = z.infer<typeof FileModelSchema>;

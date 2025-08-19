@@ -324,6 +324,35 @@ program
     console.log(result.message);
   });
 
+// Validate command
+program
+  .command('validate')
+  .description('Validate a captable.json file')
+  .option('-f, --file <file>', 'captable file to validate', 'captable.json')
+  .option('-e, --extended', 'perform extended validation with business rules')
+  .action((opts) => {
+    const result = handlers.handleValidate(opts);
+    if (!result.success) {
+      console.error(result.message);
+      process.exit(1);
+    }
+    console.log(result.message);
+  });
+
+// Schema command
+program
+  .command('schema')
+  .description('Export JSON Schema for captable validation')
+  .option('-o, --output <file>', 'output file', 'captable.schema.json')
+  .action((opts) => {
+    const result = handlers.handleSchema(opts);
+    if (!result.success) {
+      console.error(result.message);
+      process.exit(1);
+    }
+    console.log(result.message);
+  });
+
 // Helper function to check if captable exists for commands that need it
 function ensureCaptableExists() {
   if (!exists('captable.json')) {
