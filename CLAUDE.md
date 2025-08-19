@@ -27,9 +27,28 @@ Before starting a release:
    git push --set-upstream origin release/v0.2.3
    ```
 
-2. **Ensure everything is committed** and pushed to the release branch
+2. **Update CHANGELOG.md**:
+   - Add a new section for the version being released
+   - Follow the [Keep a Changelog](https://keepachangelog.com) format
+   - Include sections: Added, Changed, Fixed, Removed (as applicable)
+   - Example format:
+   ```markdown
+   ## [0.2.3] - 2025-08-20
+   
+   ### Added
+   - Feature descriptions
+   
+   ### Fixed
+   - Bug fix descriptions
+   
+   ### Changed
+   - Changes to existing functionality
+   ```
+   - Commit the changelog: `git add CHANGELOG.md && git commit -m "docs: update CHANGELOG for v0.2.3"`
 
-3. **Bump version and create tag**:
+3. **Ensure everything is committed** and pushed to the release branch
+
+4. **Bump version and create tag**:
    ```bash
    # Choose based on semantic versioning:
    yarn release:patch  # Bug fixes (0.2.2 -> 0.2.3)
