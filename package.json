@@ -1,6 +1,6 @@
 {
   "name": "captan",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Captan — Command your ownership. A tiny, hackable CLI cap table tool.",
   "type": "module",
   "bin": {
@@ -43,7 +43,7 @@
     "eslint-plugin-prettier": "^5.5.4",
     "fast-check": "^4.2.0",
     "husky": "^9.1.7",
-    "lint-staged": "^15.5.2",
+    "lint-staged": "^16.1.5",
     "prettier": "^3.6.2",
     "tsx": "^4.16.2",
     "typescript": "^5.4.0",
@@ -57,7 +57,7 @@
     "cli"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "license": "MIT",
   "author": "acossta",

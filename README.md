@@ -4,9 +4,8 @@ Open Source Cap Table Management CLI
 
 [![npm version](https://img.shields.io/npm/v/captan.svg?color=blue&logo=npm)](https://www.npmjs.com/package/captan)
 [![Downloads](https://img.shields.io/npm/dm/captan.svg?color=green)](https://www.npmjs.com/package/captan)
-[![CI](https://github.com/acossta/captan/actions/workflows/ci.yml/badge.svg)](https://github.com/acossta/captan/actions/workflows/ci.yml)
-[![Coverage Status](https://coveralls.io/repos/github/acossta/captan/badge.svg?branch=v0.2.0)](https://coveralls.io/github/acossta/captan?branch=v0.2.0)
-[![Release to npm](https://github.com/acossta/captan/actions/workflows/release.yml/badge.svg)](https://github.com/acossta/captan/actions/workflows/release.yml)
+[![CI/CD](https://github.com/acossta/captan/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/acossta/captan/actions/workflows/main.yml)
+[![Coverage Status](https://coveralls.io/repos/github/acossta/captan/badge.svg?branch=main)](https://coveralls.io/github/acossta/captan?branch=main)
 [![GitHub stars](https://img.shields.io/github/stars/acossta/captan?style=social)](https://github.com/acossta/captan)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -38,7 +37,7 @@ npm install -g captan
 captan --help
 ```
 
-> Requires Node.js 18+
+> Requires Node.js 20+
 
 ### One-minute flow
 
