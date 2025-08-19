@@ -5,6 +5,25 @@ All notable changes to Captan will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2025-08-19
+
+### Added
+- Comprehensive JSON schema validation with Zod
+- Custom format validators for dates, UUIDs, emails, currency codes, and percentages
+- Extended validation with business rules and cross-entity checks
+- Warning system for non-critical issues (orphaned stakeholders, SAFEs without terms, etc.)
+- JSON Schema generation via `captan schema` command
+- Schema validation commands: `captan validate` and `captan validate --extended`
+- Automatic schema file generation on `captan init` for IDE support
+- 45 new tests covering schema validation, error messages, and integration scenarios
+
+### Changed
+- Updated Zod dependency to ^3.24.1 for compatibility with zod-to-json-schema
+- Enhanced README with comprehensive JSON Schema & Validation documentation
+
+### Fixed
+- Entity type validation for SAFEs and option pools (preventing invalid entity combinations)
+
 ## [0.3.0] - 2025-08-19
 
 ### Added
@@ -81,6 +100,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Single JSON file storage (captable.json)
 - Zero database required
 
+[0.3.1]: https://github.com/acossta/captan/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/acossta/captan/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/acossta/captan/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/acossta/captan/compare/v0.2.0...v0.2.1
