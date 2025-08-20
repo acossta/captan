@@ -37,7 +37,7 @@ describe('CLI Integration Tests', () => {
 
   const runCLI = (args: string): string => {
     try {
-      const output = execSync(`npx --yes --no-install tsx ${cliPath} ${args}`, {
+      const output = execSync(`node --import tsx ${cliPath} ${args}`, {
         encoding: 'utf8',
         cwd: testDir,
         stdio: 'pipe',
@@ -309,6 +309,145 @@ describe('CLI Integration Tests', () => {
       const output = runCLI(`issue --holder ${aliceId} --qty 20000000`);
 
       expect(output).toContain('Cannot issue');
+    });
+  });
+
+  describe('safes command', () => {
+    beforeEach(() => {
+      runCLI('init --name "Test Inc" --authorized 10000000 --state DE');
+    });
+
+    it('should list all SAFEs', () => {
+      runCLI('stakeholder --name "Investor 1"');
+      runCLI('stakeholder --name "Investor 2"');
+      const model = JSON.parse(fs.readFileSync(testFile, 'utf8'));
+      const investor1Id = model.stakeholders[0].id;
+      const investor2Id = model.stakeholders[1].id;
+
+      runCLI(`safe --holder ${investor1Id} --amount 100000 --post-money --cap 5000000`);
+      runCLI(`safe --holder ${investor2Id} --amount 250000`);
+
+      const output = runCLI('safes');
+
+      expect(output).toContain('Investor 1');
+      expect(output).toContain('100,000');
+      expect(output).toContain('Investor 2');
+      expect(output).toContain('250,000');
+    });
+
+    it('should handle no SAFEs gracefully', () => {
+      const output = runCLI('safes');
+      expect(output).toContain('No SAFEs');
+    });
+  });
+
+  describe('report command', () => {
+    beforeEach(() => {
+      runCLI('init --name "Test Inc" --authorized 10000000 --pool 1000000 --state DE');
+    });
+
+    it('should generate stakeholder report', () => {
+      runCLI('stakeholder --name "Alice" --email alice@test.com');
+      const model = JSON.parse(fs.readFileSync(testFile, 'utf8'));
+      const aliceId = model.stakeholders[0].id;
+      runCLI(`issue --holder ${aliceId} --qty 1000000`);
+
+      const output = runCLI(`report stakeholder ${aliceId}`);
+
+      expect(output).toContain('Alice');
+      expect(output).toContain('alice@test.com');
+      expect(output).toContain('1,000,000');
+    });
+
+    it('should generate security class report', () => {
+      const output = runCLI('report security sc_pool');
+
+      expect(output).toContain('Option Pool');
+      expect(output).toContain('OPTION_POOL');
+    });
+  });
+
+  describe('list command', () => {
+    beforeEach(() => {
+      runCLI('init --name "Test Inc" --authorized 10000000 --pool 1000000 --state DE');
+    });
+
+    it('should list stakeholders', () => {
+      runCLI('stakeholder --name "Person 1"');
+      runCLI('stakeholder --name "Company 1" --entity');
+
+      const output = runCLI('list stakeholders');
+
+      expect(output).toContain('Person 1');
+      expect(output).toContain('person');
+      expect(output).toContain('Company 1');
+      expect(output).toContain('entity');
+    });
+
+    it('should list securities', () => {
+      const output = runCLI('list securities');
+
+      expect(output).toContain('Common Stock');
+      expect(output).toContain('COMMON');
+      expect(output).toContain('Option Pool');
+      expect(output).toContain('OPTION_POOL');
+    });
+  });
+
+  describe('validate command', () => {
+    beforeEach(() => {
+      runCLI('init --name "Test Inc" --authorized 10000000 --state DE');
+    });
+
+    it('should validate a valid cap table', () => {
+      runCLI('stakeholder --name "Founder"');
+      const model = JSON.parse(fs.readFileSync(testFile, 'utf8'));
+      const founderId = model.stakeholders[0].id;
+      runCLI(`issue --holder ${founderId} --qty 1000000`);
+
+      const output = runCLI('validate');
+
+      expect(output).toContain('valid');
+      expect(output).not.toContain('error');
+      expect(output).not.toContain('warning');
+    });
+
+    it('should validate with extended validation', () => {
+      const output = runCLI('validate --extended');
+
+      expect(output).toContain('valid');
+      // Extended validation performs additional business rule checks
+    });
+  });
+
+  describe('schema command', () => {
+    it('should export schema to default file', () => {
+      const schemaFile = path.join(testDir, 'captable.schema.json');
+
+      // Remove schema file if it exists
+      fs.rmSync(schemaFile, { force: true });
+
+      const output = runCLI('schema');
+
+      expect(output).toContain('Schema exported');
+      expect(fs.existsSync(schemaFile)).toBe(true);
+
+      const schema = JSON.parse(fs.readFileSync(schemaFile, 'utf8'));
+      expect(schema).toHaveProperty('$schema');
+      expect(schema).toHaveProperty('definitions');
+    });
+
+    it('should export schema to custom file', () => {
+      const customFile = 'custom-schema.json';
+
+      // Remove custom file if it exists
+      fs.rmSync(path.join(testDir, customFile), { force: true });
+
+      const output = runCLI(`schema --output ${customFile}`);
+
+      expect(output).toContain('Schema exported');
+      expect(output).toContain('custom-schema.json');
+      expect(fs.existsSync(path.join(testDir, customFile))).toBe(true);
     });
   });
 });
