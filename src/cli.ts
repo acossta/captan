@@ -3,13 +3,17 @@ import { Command } from 'commander';
 import { LOGO, NAME, TAGLINE } from './branding.js';
 import * as handlers from './cli-handlers.js';
 import { exists } from './store.js';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const packageJson = require('../package.json');
 
 const program = new Command();
 
 program
   .name('captan')
   .description(`${NAME} — ${TAGLINE}`)
-  .version('0.1.0')
+  .version(packageJson.version)
   .showHelpAfterError('(use --help for usage)')
   .addHelpText('before', LOGO + '\n');
 
