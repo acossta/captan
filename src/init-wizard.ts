@@ -213,12 +213,12 @@ export function calculatePoolFromPercentage(founderShares: number, poolPct: numb
   // Pool * (1 - P/100) = F * (P/100)
   // Pool = F * (P/100) / (1 - P/100)
   if (poolPct <= 0) return 0;
-  const ratio = poolPct / 100;
-  if (ratio >= 1) {
+  if (poolPct >= 100) {
     // 100% pool is undefined (infinite); require explicit correction upstream
     return 0;
   }
-  return Math.floor((founderShares * ratio) / (1 - ratio));
+  // Algebraic simplification avoids subtractive cancellation from (1 - P/100)
+  return Math.floor((founderShares * poolPct) / (100 - poolPct));
 }
 
 export function buildModelFromWizard(result: WizardResult): FileModel {

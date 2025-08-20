@@ -35,6 +35,15 @@ describe('CLI Integration Tests', () => {
     }
   });
 
+  // Helper to filter out transient noise from command output
+  function stripNoise(output: string): string {
+    return output
+      .split('\n')
+      .filter((line: string) => !/^(npm WARN|npm notice|npx:)/i.test(line))
+      .join('\n')
+      .trim();
+  }
+
   const runCLI = (args: string): string => {
     try {
       const output = execSync(`node --import tsx "${cliPath}" ${args}`, {
@@ -43,19 +52,11 @@ describe('CLI Integration Tests', () => {
         stdio: 'pipe',
       });
       // Filter out npm warnings/notices and npx chatter
-      return output
-        .split('\n')
-        .filter((line: string) => !/^(npm WARN|npm notice|npx:)/i.test(line))
-        .join('\n')
-        .trim();
+      return stripNoise(output);
     } catch (error: any) {
       const errorOutput = error.stdout || error.stderr || error.message;
       // Filter out npm warnings/notices and npx chatter from error output too
-      return errorOutput
-        .split('\n')
-        .filter((line: string) => !/^(npm WARN|npm notice|npx:)/i.test(line))
-        .join('\n')
-        .trim();
+      return stripNoise(errorOutput);
     }
   };
 

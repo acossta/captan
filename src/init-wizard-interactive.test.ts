@@ -272,7 +272,7 @@ describe('runInitWizard - Interactive Flow', () => {
       mockInput.mockResolvedValueOnce('DE'); // jurisdiction
       mockInput.mockResolvedValueOnce('USD'); // currency
       mockNumber.mockResolvedValueOnce(undefined); // authorized shares (use default)
-      mockNumber.mockResolvedValueOnce(undefined); // par value (use default)
+      mockNumber.mockResolvedValueOnce(undefined); // par value (leave blank -> undefined)
       mockConfirm.mockResolvedValueOnce(false); // no pool
       mockConfirm.mockResolvedValueOnce(false); // no founders
 

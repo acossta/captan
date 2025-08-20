@@ -136,8 +136,8 @@ describe('init-wizard', () => {
       });
 
       it('handles 99% pool correctly', () => {
-        // 99% pool: 1M * 0.99 / 0.01 ≈ 99M; due to floating-point precision in JS, Math.floor(...) yields 98,999,999
-        expect(calculatePoolFromPercentage(1000000, 99)).toBe(98999999);
+        // 99% pool: 1M * 99 / (100 - 99) = 1M * 99 / 1 = 99M exactly
+        expect(calculatePoolFromPercentage(1000000, 99)).toBe(99000000);
       });
     });
   });
