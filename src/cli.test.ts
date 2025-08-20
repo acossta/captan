@@ -37,7 +37,7 @@ describe('CLI Integration Tests', () => {
 
   const runCLI = (args: string): string => {
     try {
-      const output = execSync(`node --import tsx ${cliPath} ${args}`, {
+      const output = execSync(`node --import tsx "${cliPath}" ${args}`, {
         encoding: 'utf8',
         cwd: testDir,
         stdio: 'pipe',
