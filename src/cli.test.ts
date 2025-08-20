@@ -12,9 +12,7 @@ const testFile = path.join(testDir, 'captable.json');
 describe('CLI Integration Tests', () => {
   beforeEach(() => {
     // Clean up any existing files first
-    if (fs.existsSync(testFile)) {
-      fs.unlinkSync(testFile);
-    }
+    fs.rmSync(testFile, { force: true });
     if (!fs.existsSync(testDir)) {
       fs.mkdirSync(testDir, { recursive: true });
     }
@@ -22,12 +20,16 @@ describe('CLI Integration Tests', () => {
   });
 
   afterEach(() => {
-    // Switch back before cleaning up to avoid EBUSY on Windows
+    // Switch back to the repo dir to release testDir handles (prevents EBUSY on Windows)
     process.chdir(__dirname);
   });
 
   afterAll(() => {
     // Clean up the test directory after all tests complete
+    // Be defensive: ensure we are not inside testDir before removing it
+    try {
+      process.chdir(__dirname);
+    } catch {}
     if (fs.existsSync(testDir)) {
       fs.rmSync(testDir, { recursive: true, force: true });
     }
@@ -35,23 +37,25 @@ describe('CLI Integration Tests', () => {
 
   const runCLI = (args: string): string => {
     try {
-      const output = execSync(`npx -y tsx ${cliPath} ${args}`, {
+      const output = execSync(`npx --yes --no-install tsx ${cliPath} ${args}`, {
         encoding: 'utf8',
         cwd: testDir,
         stdio: 'pipe',
       });
-      // Filter out npm warnings
+      // Filter out npm warnings/notices and npx chatter
       return output
         .split('\n')
-        .filter((line: string) => !/^(npm WARN|npm notice)/i.test(line))
-        .join('\n');
+        .filter((line: string) => !/^(npm WARN|npm notice|npx:)/i.test(line))
+        .join('\n')
+        .trim();
     } catch (error: any) {
       const errorOutput = error.stdout || error.stderr || error.message;
-      // Filter out npm warnings from error output too
+      // Filter out npm warnings/notices and npx chatter from error output too
       return errorOutput
         .split('\n')
-        .filter((line: string) => !/^(npm WARN|npm notice)/i.test(line))
-        .join('\n');
+        .filter((line: string) => !/^(npm WARN|npm notice|npx:)/i.test(line))
+        .join('\n')
+        .trim();
     }
   };
 
