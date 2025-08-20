@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -22,11 +22,15 @@ describe('CLI Integration Tests', () => {
   });
 
   afterEach(() => {
-    // Clean up after test
-    if (fs.existsSync(testFile)) fs.unlinkSync(testFile);
-    // Switch back before removing the directory to avoid EBUSY on Windows
+    // Switch back before cleaning up to avoid EBUSY on Windows
     process.chdir(__dirname);
-    if (fs.existsSync(testDir)) fs.rmSync(testDir, { recursive: true, force: true });
+  });
+
+  afterAll(() => {
+    // Clean up the test directory after all tests complete
+    if (fs.existsSync(testDir)) {
+      fs.rmSync(testDir, { recursive: true, force: true });
+    }
   });
 
   const runCLI = (args: string): string => {

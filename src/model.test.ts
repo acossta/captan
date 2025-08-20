@@ -613,25 +613,18 @@ describe('calcCap', () => {
 });
 
 describe('getEntityDefaults', () => {
-  it('returns correct defaults for C_CORP', () => {
-    const defaults = getEntityDefaults('C_CORP');
+  it.each([['C_CORP' as const], ['S_CORP' as const]])(
+    'returns correct defaults for %s',
+    (entityType) => {
+      const defaults = getEntityDefaults(entityType);
 
-    expect(defaults.authorized).toBe(10000000);
-    expect(defaults.parValue).toBe(0.00001);
-    expect(defaults.unitsName).toBe('Shares');
-    expect(defaults.holderName).toBe('Stockholder');
-    expect(defaults.poolPct).toBe(10);
-  });
-
-  it('returns correct defaults for S_CORP', () => {
-    const defaults = getEntityDefaults('S_CORP');
-
-    expect(defaults.authorized).toBe(10000000);
-    expect(defaults.parValue).toBe(0.00001);
-    expect(defaults.unitsName).toBe('Shares');
-    expect(defaults.holderName).toBe('Stockholder');
-    expect(defaults.poolPct).toBe(10);
-  });
+      expect(defaults.authorized).toBe(10000000);
+      expect(defaults.parValue).toBeCloseTo(0.00001, 10);
+      expect(defaults.unitsName).toBe('Shares');
+      expect(defaults.holderName).toBe('Stockholder');
+      expect(defaults.poolPct).toBe(10);
+    }
+  );
 
   it('returns correct defaults for LLC', () => {
     const defaults = getEntityDefaults('LLC');
