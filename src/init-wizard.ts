@@ -61,6 +61,10 @@ export async function runInitWizard(): Promise<WizardResult> {
   const authorized = await number({
     message: `Authorized ${defaults.unitsName.toLowerCase()}:`,
     default: defaults.authorized,
+    validate: (val) =>
+      val !== undefined && Number.isInteger(val) && val > 0
+        ? true
+        : `Authorized ${defaults.unitsName.toLowerCase()} must be a positive integer`,
   });
 
   let parValue: number | undefined;
@@ -106,7 +110,10 @@ export async function runInitWizard(): Promise<WizardResult> {
     } else {
       poolSize = await number({
         message: `Number of ${defaults.unitsName.toLowerCase()} for pool:`,
-        default: Math.floor((authorized || 10000000) * (defaults.poolPct / 100)),
+        default: Math.floor(
+          (authorized && authorized > 0 ? authorized : defaults.authorized) *
+            (defaults.poolPct / 100)
+        ),
         validate: (val) =>
           val === undefined || (typeof val === 'number' && val >= 0)
             ? true
@@ -131,11 +138,14 @@ export async function runInitWizard(): Promise<WizardResult> {
 
       const founderEmail = await input({
         message: 'Founder email (optional):',
-        default: undefined,
       });
 
       const founderShares = await number({
         message: `Number of ${defaults.unitsName.toLowerCase()}:`,
+        validate: (val) =>
+          val !== undefined && Number.isInteger(val) && val > 0
+            ? true
+            : `Enter a positive integer number of ${defaults.unitsName.toLowerCase()}`,
       });
 
       if (founderShares && founderShares > 0) {
@@ -179,12 +189,12 @@ export function parseFounderString(founderStr: string): FounderInput {
   if (parts.length === 2) {
     // "Name:qty" or "Name:qty@pps"
     const [name, qtyPart] = parts;
-    const qty = parseInt(qtyPart.split('@')[0].replace(/,/g, ''));
+    const qty = parseInt(qtyPart.split('@')[0].replace(/,/g, ''), 10);
     return { name: name.trim(), shares: qty };
   } else if (parts.length === 3) {
     // "Name:email:qty" or "Name:email:qty@pps"
     const [name, email, qtyPart] = parts;
-    const qty = parseInt(qtyPart.split('@')[0].replace(/,/g, ''));
+    const qty = parseInt(qtyPart.split('@')[0].replace(/,/g, ''), 10);
     return {
       name: name.trim(),
       email: email.trim(),

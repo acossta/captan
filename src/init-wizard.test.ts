@@ -136,7 +136,7 @@ describe('init-wizard', () => {
       });
 
       it('handles 99% pool correctly', () => {
-        // 99% pool: 1M * 0.99 / 0.01 = 99M (with floor rounding)
+        // 99% pool: 1M * 0.99 / 0.01 ≈ 99M; due to floating-point precision in JS, Math.floor(...) yields 98,999,999
         expect(calculatePoolFromPercentage(1000000, 99)).toBe(98999999);
       });
     });
@@ -170,7 +170,7 @@ describe('init-wizard', () => {
       // Check common stock
       const common = model.securityClasses.find((sc) => sc.kind === 'COMMON');
       expect(common?.authorized).toBe(10000000);
-      expect(common?.parValue).toBe(0.00001);
+      expect(common?.parValue).toBeCloseTo(0.00001, 10);
       expect(common?.label).toBe('Common Stock');
 
       // Check pool
@@ -403,6 +403,8 @@ describe('init-wizard', () => {
 
       expect(common?.parValue).toBeCloseTo(0.00001, 10);
       expect(common?.authorized).toBe(10000000);
+      const pool = model.securityClasses.find((sc) => sc.kind === 'OPTION_POOL');
+      expect(pool).toBeUndefined();
     });
 
     it('should handle decimal par values correctly', () => {
