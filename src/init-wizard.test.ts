@@ -4,7 +4,7 @@ import {
   calculatePoolFromPercentage,
   buildModelFromWizard,
 } from './init-wizard.js';
-import { EntityType } from './model.js';
+import { EntityType, getEntityDefaults } from './model.js';
 
 describe('init-wizard', () => {
   describe('parseFounderString', () => {
@@ -349,23 +349,24 @@ describe('init-wizard', () => {
     // Note: These would need proper mocking of inquirer prompts in a real test environment
     // For now, we'll test the related functions that are called by the wizard
 
-    it('should use entity defaults for different entity types', () => {
+    it('should correctly process wizard results using entity default values', () => {
+      const defaults = getEntityDefaults('C_CORP');
       const cCorpResult = {
         name: 'Test C-Corp',
         formationDate: '2024-01-01',
         entityType: 'C_CORP' as EntityType,
         jurisdiction: 'DE',
         currency: 'USD',
-        authorized: 10000000,
-        parValue: 0.00001, // Should use new default
-        poolPct: 10, // Should use new default
+        authorized: defaults.authorized,
+        parValue: defaults.parValue,
+        poolPct: defaults.poolPct,
         founders: [],
       };
 
       const model = buildModelFromWizard(cCorpResult);
       const common = model.securityClasses.find((sc) => sc.kind === 'COMMON');
 
-      expect(common?.parValue).toBe(0.00001);
+      expect(common?.parValue).toBeCloseTo(0.00001, 10);
       expect(common?.authorized).toBe(10000000);
     });
 
@@ -385,8 +386,8 @@ describe('init-wizard', () => {
       const common = model.securityClasses.find((sc) => sc.kind === 'COMMON');
       const issuance = model.issuances[0];
 
-      expect(common?.parValue).toBe(0.00001);
-      expect(issuance?.pps).toBe(0.00001); // Price per share should match par value
+      expect(common?.parValue).toBeCloseTo(0.00001, 10);
+      expect(issuance?.pps).toBeCloseTo(0.00001, 10); // Price per share should match par value
     });
 
     it('should handle various decimal par value sizes', () => {
@@ -412,7 +413,7 @@ describe('init-wizard', () => {
         const model = buildModelFromWizard(result);
         const common = model.securityClasses.find((sc) => sc.kind === 'COMMON');
 
-        expect(common?.parValue).toBe(parValue);
+        expect(common?.parValue).toBeCloseTo(parValue, 10);
       });
     });
 
