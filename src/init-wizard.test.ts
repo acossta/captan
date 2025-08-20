@@ -124,7 +124,7 @@ describe('init-wizard', () => {
 
     it('handles very small percentages', () => {
       const pool = calculatePoolFromPercentage(10000000, 0.1);
-      expect(pool).toBe(Math.round((10000000 * 0.001) / 0.999));
+      expect(pool).toBe(Math.floor((10000000 * 0.1) / (100 - 0.1)));
     });
 
     it('handles fractional results', () => {
@@ -152,12 +152,21 @@ describe('init-wizard', () => {
       });
 
       it('handles small positive percentages correctly', () => {
-        expect(calculatePoolFromPercentage(1000000, 0.1)).toBe(1001);
+        expect(calculatePoolFromPercentage(1000000, 0.1)).toBe(
+          Math.floor((1000000 * 0.1) / (100 - 0.1))
+        );
       });
 
       it('handles 99% pool correctly', () => {
         // 99% pool: 1M * 99 / (100 - 99) = 1M * 99 / 1 = 99M exactly
         expect(calculatePoolFromPercentage(1000000, 99)).toBe(99000000);
+      });
+
+      it('handles fractional pool percentages correctly', () => {
+        // 12.5% pool: 1M * 12.5 / (100 - 12.5) = 1M * 12.5 / 87.5 = 142,857
+        expect(calculatePoolFromPercentage(1000000, 12.5)).toBe(142857);
+        // 7.5% pool: 2M * 7.5 / (100 - 7.5) = 2M * 7.5 / 92.5 = 162,162
+        expect(calculatePoolFromPercentage(2000000, 7.5)).toBe(162162);
       });
     });
   });

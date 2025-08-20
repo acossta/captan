@@ -102,6 +102,7 @@ export async function runInitWizard(): Promise<WizardResult> {
       poolPct = await number({
         message: `Pool percentage (e.g., ${defaults.poolPct} for ${defaults.poolPct}%):`,
         default: defaults.poolPct,
+        step: 'any',
         validate: (val) =>
           val === undefined || (typeof val === 'number' && val >= 0 && val < 100)
             ? true
@@ -148,7 +149,7 @@ export async function runInitWizard(): Promise<WizardResult> {
             : `Enter a positive integer number of ${defaults.unitsName.toLowerCase()}`,
       });
 
-      if (founderShares && founderShares > 0) {
+      if (founderShares) {
         founders.push({
           name: founderName,
           email: founderEmail?.trim() ? founderEmail.trim() : undefined,
