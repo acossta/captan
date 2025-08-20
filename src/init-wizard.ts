@@ -69,6 +69,10 @@ export async function runInitWizard(): Promise<WizardResult> {
       message: 'Par value per share:',
       default: defaults.parValue,
       step: 'any',
+      validate: (val) =>
+        val === undefined || (typeof val === 'number' && val >= 0)
+          ? true
+          : 'Par value must be a non-negative number',
     });
   }
 
@@ -94,11 +98,19 @@ export async function runInitWizard(): Promise<WizardResult> {
       poolPct = await number({
         message: `Pool percentage (e.g., ${defaults.poolPct} for ${defaults.poolPct}%):`,
         default: defaults.poolPct,
+        validate: (val) =>
+          val === undefined || (typeof val === 'number' && val >= 0 && val <= 100)
+            ? true
+            : 'Pool percentage must be between 0 and 100',
       });
     } else {
       poolSize = await number({
         message: `Number of ${defaults.unitsName.toLowerCase()} for pool:`,
         default: Math.floor((authorized || 10000000) * (defaults.poolPct / 100)),
+        validate: (val) =>
+          val === undefined || (typeof val === 'number' && val >= 0)
+            ? true
+            : 'Pool size must be a non-negative number',
       });
     }
   }
