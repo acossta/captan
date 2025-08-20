@@ -92,13 +92,13 @@ export async function runInitWizard(): Promise<WizardResult> {
 
     if (poolType === 'percent') {
       poolPct = await number({
-        message: 'Pool percentage (e.g., 20 for 20%):',
+        message: `Pool percentage (e.g., ${defaults.poolPct} for ${defaults.poolPct}%):`,
         default: defaults.poolPct,
       });
     } else {
       poolSize = await number({
         message: `Number of ${defaults.unitsName.toLowerCase()} for pool:`,
-        default: Math.floor((authorized || 10000000) * 0.2),
+        default: Math.floor((authorized || 10000000) * (defaults.poolPct / 100)),
       });
     }
   }
