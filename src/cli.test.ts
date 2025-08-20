@@ -23,15 +23,15 @@ describe('CLI Integration Tests', () => {
 
   afterEach(() => {
     // Clean up after test
-    if (fs.existsSync(testFile)) {
-      fs.unlinkSync(testFile);
-    }
+    if (fs.existsSync(testFile)) fs.unlinkSync(testFile);
+    // Switch back before removing the directory to avoid EBUSY on Windows
     process.chdir(__dirname);
+    if (fs.existsSync(testDir)) fs.rmSync(testDir, { recursive: true, force: true });
   });
 
   const runCLI = (args: string): string => {
     try {
-      const output = execSync(`npx tsx ${cliPath} ${args}`, {
+      const output = execSync(`npx -y tsx ${cliPath} ${args}`, {
         encoding: 'utf8',
         cwd: testDir,
         stdio: 'pipe',
@@ -39,14 +39,14 @@ describe('CLI Integration Tests', () => {
       // Filter out npm warnings
       return output
         .split('\n')
-        .filter((line: string) => !line.startsWith('npm warn'))
+        .filter((line: string) => !/^(npm WARN|npm notice)/i.test(line))
         .join('\n');
     } catch (error: any) {
       const errorOutput = error.stdout || error.stderr || error.message;
       // Filter out npm warnings from error output too
       return errorOutput
         .split('\n')
-        .filter((line: string) => !line.startsWith('npm warn'))
+        .filter((line: string) => !/^(npm WARN|npm notice)/i.test(line))
         .join('\n');
     }
   };
