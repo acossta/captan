@@ -73,6 +73,7 @@ export async function runInitWizard(): Promise<WizardResult> {
       message: 'Par value per share:',
       default: defaults.parValue,
       step: 'any',
+      min: 0,
       validate: (val) =>
         val === undefined || (typeof val === 'number' && val >= 0)
           ? true
@@ -103,6 +104,8 @@ export async function runInitWizard(): Promise<WizardResult> {
         message: `Pool percentage (e.g., ${defaults.poolPct} for ${defaults.poolPct}%):`,
         default: defaults.poolPct,
         step: 'any',
+        min: 0,
+        max: 99.999999,
         validate: (val) =>
           val === undefined || (typeof val === 'number' && val >= 0 && val < 100)
             ? true
@@ -115,6 +118,7 @@ export async function runInitWizard(): Promise<WizardResult> {
           const baseAuthorized = authorized && authorized > 0 ? authorized : defaults.authorized;
           return Math.floor(baseAuthorized * (defaults.poolPct / 100));
         })(),
+        min: 0,
         validate: (val) =>
           val === undefined || (typeof val === 'number' && val >= 0)
             ? true
