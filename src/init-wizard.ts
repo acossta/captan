@@ -99,9 +99,9 @@ export async function runInitWizard(): Promise<WizardResult> {
         message: `Pool percentage (e.g., ${defaults.poolPct} for ${defaults.poolPct}%):`,
         default: defaults.poolPct,
         validate: (val) =>
-          val === undefined || (typeof val === 'number' && val >= 0 && val <= 100)
+          val === undefined || (typeof val === 'number' && val >= 0 && val < 100)
             ? true
-            : 'Pool percentage must be between 0 and 100',
+            : 'Pool percentage must be between 0 and 100 (exclusive)',
       });
     } else {
       poolSize = await number({
