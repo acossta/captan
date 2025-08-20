@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -11,6 +11,10 @@ const testFile = path.join(testDir, 'captable.json');
 
 describe('CLI Integration Tests', () => {
   beforeEach(() => {
+    // Clean up any existing files first
+    if (fs.existsSync(testFile)) {
+      fs.unlinkSync(testFile);
+    }
     if (!fs.existsSync(testDir)) {
       fs.mkdirSync(testDir, { recursive: true });
     }
@@ -18,6 +22,7 @@ describe('CLI Integration Tests', () => {
   });
 
   afterEach(() => {
+    // Clean up after test
     if (fs.existsSync(testFile)) {
       fs.unlinkSync(testFile);
     }
@@ -34,14 +39,14 @@ describe('CLI Integration Tests', () => {
       // Filter out npm warnings
       return output
         .split('\n')
-        .filter((line) => !line.startsWith('npm warn'))
+        .filter((line: string) => !line.startsWith('npm warn'))
         .join('\n');
     } catch (error: any) {
       const errorOutput = error.stdout || error.stderr || error.message;
       // Filter out npm warnings from error output too
       return errorOutput
         .split('\n')
-        .filter((line) => !line.startsWith('npm warn'))
+        .filter((line: string) => !line.startsWith('npm warn'))
         .join('\n');
     }
   };

@@ -123,7 +123,7 @@ describe('init-wizard', () => {
         jurisdiction: 'DE',
         currency: 'USD',
         authorized: 10000000,
-        parValue: 0.0001,
+        parValue: 0.00001,
         poolSize: 2000000,
         poolPct: undefined,
         founders: [
@@ -142,7 +142,7 @@ describe('init-wizard', () => {
       // Check common stock
       const common = model.securityClasses.find((sc) => sc.kind === 'COMMON');
       expect(common?.authorized).toBe(10000000);
-      expect(common?.parValue).toBe(0.0001);
+      expect(common?.parValue).toBe(0.00001);
       expect(common?.label).toBe('Common Stock');
 
       // Check pool
@@ -196,16 +196,16 @@ describe('init-wizard', () => {
         jurisdiction: 'DE',
         currency: 'USD',
         authorized: 10000000,
-        parValue: 0.0001,
+        parValue: 0.00001,
         poolSize: undefined,
-        poolPct: 20,
+        poolPct: 10,
         founders: [{ name: 'Alice', shares: 8000000 }],
       };
 
       const model = buildModelFromWizard(result);
 
       const pool = model.securityClasses.find((sc) => sc.kind === 'OPTION_POOL');
-      expect(pool?.authorized).toBe(2000000); // 20% of total
+      expect(pool?.authorized).toBe(888888); // 10% of total: 8M * 0.1 / 0.9 = 888,888
     });
 
     it('handles no founders', () => {
@@ -215,7 +215,7 @@ describe('init-wizard', () => {
         jurisdiction: 'DE',
         currency: 'USD',
         authorized: 10000000,
-        parValue: 0.0001,
+        parValue: 0.00001,
         poolSize: 1000000,
         poolPct: undefined,
         founders: [],
@@ -282,7 +282,7 @@ describe('init-wizard', () => {
         jurisdiction: 'DE',
         currency: 'EUR',
         authorized: 10000000,
-        parValue: 0.0001,
+        parValue: 0.00001,
         poolSize: undefined,
         poolPct: 10,
         founders: [
@@ -313,9 +313,9 @@ describe('init-wizard', () => {
         jurisdiction: 'DE',
         currency: 'USD',
         authorized: 10000000,
-        parValue: 0.0001,
+        parValue: 0.00001,
         poolSize: 3000000, // This should take precedence
-        poolPct: 20, // This would be 2000000 if calculated
+        poolPct: 10, // This would be 2000000 if calculated
         founders: [{ name: 'Dan', shares: 7000000 }],
       };
 
@@ -333,7 +333,7 @@ describe('init-wizard', () => {
         jurisdiction: 'DE',
         currency: 'USD',
         authorized: 10000000,
-        parValue: 0.0001,
+        parValue: 0.00001,
         poolSize: undefined,
         poolPct: undefined,
         founders: [],
@@ -342,6 +342,208 @@ describe('init-wizard', () => {
       const model = buildModelFromWizard(result);
 
       expect(model.company.formationDate).toBe('2024-06-15');
+    });
+  });
+
+  describe('runInitWizard integration', () => {
+    // Note: These would need proper mocking of inquirer prompts in a real test environment
+    // For now, we'll test the related functions that are called by the wizard
+
+    it('should use entity defaults for different entity types', () => {
+      const cCorpResult = {
+        name: 'Test C-Corp',
+        formationDate: '2024-01-01',
+        entityType: 'C_CORP' as EntityType,
+        jurisdiction: 'DE',
+        currency: 'USD',
+        authorized: 10000000,
+        parValue: 0.00001, // Should use new default
+        poolPct: 10, // Should use new default
+        founders: [],
+      };
+
+      const model = buildModelFromWizard(cCorpResult);
+      const common = model.securityClasses.find((sc) => sc.kind === 'COMMON');
+
+      expect(common?.parValue).toBe(0.00001);
+      expect(common?.authorized).toBe(10000000);
+    });
+
+    it('should handle decimal par values correctly', () => {
+      const result = {
+        name: 'Decimal Par Corp',
+        formationDate: '2024-01-01',
+        entityType: 'C_CORP' as EntityType,
+        jurisdiction: 'DE',
+        currency: 'USD',
+        authorized: 10000000,
+        parValue: 0.00001, // Very small decimal
+        founders: [{ name: 'Founder', shares: 8000000 }],
+      };
+
+      const model = buildModelFromWizard(result);
+      const common = model.securityClasses.find((sc) => sc.kind === 'COMMON');
+      const issuance = model.issuances[0];
+
+      expect(common?.parValue).toBe(0.00001);
+      expect(issuance?.pps).toBe(0.00001); // Price per share should match par value
+    });
+
+    it('should handle various decimal par value sizes', () => {
+      const testCases = [
+        { parValue: 0.00001, description: 'five decimal places' },
+        { parValue: 0.0001, description: 'four decimal places' },
+        { parValue: 0.001, description: 'three decimal places' },
+        { parValue: 0.01, description: 'two decimal places' },
+      ];
+
+      testCases.forEach(({ parValue, description }) => {
+        const result = {
+          name: `Test Corp ${description}`,
+          formationDate: '2024-01-01',
+          entityType: 'C_CORP' as EntityType,
+          jurisdiction: 'DE',
+          currency: 'USD',
+          authorized: 10000000,
+          parValue,
+          founders: [],
+        };
+
+        const model = buildModelFromWizard(result);
+        const common = model.securityClasses.find((sc) => sc.kind === 'COMMON');
+
+        expect(common?.parValue).toBe(parValue);
+      });
+    });
+
+    it('should create appropriate pool sizes with new 10% default', () => {
+      const result = {
+        name: 'Pool Test Corp',
+        formationDate: '2024-01-01',
+        entityType: 'C_CORP' as EntityType,
+        jurisdiction: 'DE',
+        currency: 'USD',
+        authorized: 10000000,
+        parValue: 0.00001,
+        poolPct: 10, // Using new default
+        founders: [{ name: 'Founder', shares: 9000000 }],
+      };
+
+      const model = buildModelFromWizard(result);
+      const pool = model.securityClasses.find((sc) => sc.kind === 'OPTION_POOL');
+
+      // With 9M founder shares and 10% pool: 9M * 0.1 / 0.9 = 1M
+      expect(pool?.authorized).toBe(1000000);
+    });
+
+    it('should handle edge case pool percentages', () => {
+      const testCases = [
+        { poolPct: 5, founderShares: 9500000, expectedPool: 500000 }, // 9.5M * 0.05 / 0.95 = 500K
+        { poolPct: 15, founderShares: 8500000, expectedPool: 1500000 }, // 8.5M * 0.15 / 0.85 = 1.5M
+        { poolPct: 25, founderShares: 7500000, expectedPool: 2500000 }, // 7.5M * 0.25 / 0.75 = 2.5M
+      ];
+
+      testCases.forEach(({ poolPct, founderShares, expectedPool }) => {
+        const result = {
+          name: `Pool ${poolPct}% Corp`,
+          formationDate: '2024-01-01',
+          entityType: 'C_CORP' as EntityType,
+          jurisdiction: 'DE',
+          currency: 'USD',
+          authorized: 10000000,
+          parValue: 0.00001,
+          poolPct,
+          founders: [{ name: 'Founder', shares: founderShares }],
+        };
+
+        const model = buildModelFromWizard(result);
+        const pool = model.securityClasses.find((sc) => sc.kind === 'OPTION_POOL');
+
+        expect(pool?.authorized).toBe(expectedPool);
+      });
+    });
+
+    it('should handle zero par value (though not recommended)', () => {
+      const result = {
+        name: 'Zero Par Corp',
+        formationDate: '2024-01-01',
+        entityType: 'C_CORP' as EntityType,
+        jurisdiction: 'DE',
+        currency: 'USD',
+        authorized: 10000000,
+        parValue: 0,
+        founders: [{ name: 'Founder', shares: 10000000 }],
+      };
+
+      const model = buildModelFromWizard(result);
+      const common = model.securityClasses.find((sc) => sc.kind === 'COMMON');
+      const issuance = model.issuances[0];
+
+      expect(common?.parValue).toBe(0);
+      expect(issuance?.pps).toBe(0);
+    });
+
+    it('should generate unique IDs for all entities', () => {
+      const result = {
+        name: 'ID Test Corp',
+        formationDate: '2024-01-01',
+        entityType: 'C_CORP' as EntityType,
+        jurisdiction: 'DE',
+        currency: 'USD',
+        authorized: 10000000,
+        parValue: 0.00001,
+        poolSize: 1000000,
+        founders: [
+          { name: 'Founder 1', shares: 4000000 },
+          { name: 'Founder 2', shares: 5000000 },
+        ],
+      };
+
+      const model = buildModelFromWizard(result);
+
+      // Check that all IDs are unique
+      const allIds = [
+        model.company.id,
+        ...model.stakeholders.map((s) => s.id),
+        ...model.securityClasses.map((sc) => sc.id),
+        ...model.issuances.map((i) => i.id),
+      ];
+
+      const uniqueIds = new Set(allIds);
+      expect(uniqueIds.size).toBe(allIds.length);
+
+      // Check ID formats
+      expect(model.company.id).toMatch(/^comp_[a-f0-9-]+$/);
+      model.stakeholders.forEach((s) => {
+        expect(s.id).toMatch(/^sh_[a-f0-9-]+$/);
+      });
+      model.issuances.forEach((i) => {
+        expect(i.id).toMatch(/^is_[a-f0-9-]+$/);
+      });
+    });
+
+    it('should properly set issuance dates to formation date', () => {
+      const formationDate = '2023-05-15';
+      const result = {
+        name: 'Date Test Corp',
+        formationDate,
+        entityType: 'C_CORP' as EntityType,
+        jurisdiction: 'DE',
+        currency: 'USD',
+        authorized: 10000000,
+        parValue: 0.00001,
+        founders: [
+          { name: 'Founder 1', shares: 3000000 },
+          { name: 'Founder 2', shares: 7000000 },
+        ],
+      };
+
+      const model = buildModelFromWizard(result);
+
+      expect(model.company.formationDate).toBe(formationDate);
+      model.issuances.forEach((issuance) => {
+        expect(issuance.date).toBe(formationDate);
+      });
     });
   });
 });

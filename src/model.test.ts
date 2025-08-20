@@ -7,6 +7,7 @@ import {
   Vesting,
   convertSAFE,
   SAFE,
+  getEntityDefaults,
 } from './model.js';
 
 describe('monthsBetween', () => {
@@ -608,6 +609,58 @@ describe('calcCap', () => {
     expect(result.rows[0].name).toBe('Alice');
     expect(result.rows[1].name).toBe('Charlie');
     expect(result.rows[2].name).toBe('Bob');
+  });
+});
+
+describe('getEntityDefaults', () => {
+  it('returns correct defaults for C_CORP', () => {
+    const defaults = getEntityDefaults('C_CORP');
+
+    expect(defaults.authorized).toBe(10000000);
+    expect(defaults.parValue).toBe(0.00001);
+    expect(defaults.unitsName).toBe('Shares');
+    expect(defaults.holderName).toBe('Stockholder');
+    expect(defaults.poolPct).toBe(10);
+  });
+
+  it('returns correct defaults for S_CORP', () => {
+    const defaults = getEntityDefaults('S_CORP');
+
+    expect(defaults.authorized).toBe(10000000);
+    expect(defaults.parValue).toBe(0.00001);
+    expect(defaults.unitsName).toBe('Shares');
+    expect(defaults.holderName).toBe('Stockholder');
+    expect(defaults.poolPct).toBe(10);
+  });
+
+  it('returns correct defaults for LLC', () => {
+    const defaults = getEntityDefaults('LLC');
+
+    expect(defaults.authorized).toBe(1000000);
+    expect(defaults.parValue).toBeUndefined();
+    expect(defaults.unitsName).toBe('Units');
+    expect(defaults.holderName).toBe('Member');
+    expect(defaults.poolPct).toBe(0);
+  });
+
+  it('C_CORP and S_CORP have identical defaults', () => {
+    const cCorpDefaults = getEntityDefaults('C_CORP');
+    const sCorpDefaults = getEntityDefaults('S_CORP');
+
+    expect(cCorpDefaults).toEqual(sCorpDefaults);
+  });
+
+  it('LLC defaults differ from corporation defaults', () => {
+    const cCorpDefaults = getEntityDefaults('C_CORP');
+    const llcDefaults = getEntityDefaults('LLC');
+
+    expect(llcDefaults.authorized).toBeLessThan(cCorpDefaults.authorized);
+    expect(llcDefaults.parValue).toBeUndefined();
+    expect(cCorpDefaults.parValue).toBeDefined();
+    expect(llcDefaults.unitsName).toBe('Units');
+    expect(cCorpDefaults.unitsName).toBe('Shares');
+    expect(llcDefaults.poolPct).toBe(0);
+    expect(cCorpDefaults.poolPct).toBeGreaterThan(0);
   });
 });
 
