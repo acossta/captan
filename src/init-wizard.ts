@@ -61,6 +61,10 @@ export async function runInitWizard(): Promise<WizardResult> {
   const authorized = await number({
     message: `Authorized ${defaults.unitsName.toLowerCase()}:`,
     default: defaults.authorized,
+    validate: (val) =>
+      val !== undefined && Number.isInteger(val) && val > 0
+        ? true
+        : `Authorized ${defaults.unitsName.toLowerCase()} must be a positive integer`,
   });
 
   let parValue: number | undefined;
@@ -68,6 +72,12 @@ export async function runInitWizard(): Promise<WizardResult> {
     parValue = await number({
       message: 'Par value per share:',
       default: defaults.parValue,
+      step: 'any',
+      min: 0,
+      validate: (val) =>
+        val === undefined || (typeof val === 'number' && val >= 0)
+          ? true
+          : 'Par value must be a non-negative number',
     });
   }
 
@@ -91,13 +101,28 @@ export async function runInitWizard(): Promise<WizardResult> {
 
     if (poolType === 'percent') {
       poolPct = await number({
-        message: 'Pool percentage (e.g., 20 for 20%):',
+        message: `Pool percentage (e.g., ${defaults.poolPct} for ${defaults.poolPct}%):`,
         default: defaults.poolPct,
+        step: 'any',
+        min: 0,
+        max: 99.999999,
+        validate: (val) =>
+          val === undefined || (typeof val === 'number' && val >= 0 && val < 100)
+            ? true
+            : 'Pool percentage must be between 0 and 100 (exclusive)',
       });
     } else {
       poolSize = await number({
         message: `Number of ${defaults.unitsName.toLowerCase()} for pool:`,
-        default: Math.floor((authorized || 10000000) * 0.2),
+        default: (() => {
+          const baseAuthorized = authorized && authorized > 0 ? authorized : defaults.authorized;
+          return Math.floor(baseAuthorized * (defaults.poolPct / 100));
+        })(),
+        min: 0,
+        validate: (val) =>
+          val === undefined || (typeof val === 'number' && val >= 0)
+            ? true
+            : 'Pool size must be a non-negative number',
       });
     }
   }
@@ -118,17 +143,20 @@ export async function runInitWizard(): Promise<WizardResult> {
 
       const founderEmail = await input({
         message: 'Founder email (optional):',
-        default: undefined,
       });
 
       const founderShares = await number({
         message: `Number of ${defaults.unitsName.toLowerCase()}:`,
+        validate: (val) =>
+          val !== undefined && Number.isInteger(val) && val > 0
+            ? true
+            : `Enter a positive integer number of ${defaults.unitsName.toLowerCase()}`,
       });
 
-      if (founderShares && founderShares > 0) {
+      if (founderShares) {
         founders.push({
           name: founderName,
-          email: founderEmail || undefined,
+          email: founderEmail?.trim() ? founderEmail.trim() : undefined,
           shares: founderShares,
         });
       }
@@ -166,12 +194,14 @@ export function parseFounderString(founderStr: string): FounderInput {
   if (parts.length === 2) {
     // "Name:qty" or "Name:qty@pps"
     const [name, qtyPart] = parts;
-    const qty = parseInt(qtyPart.split('@')[0].replace(/,/g, ''));
+    const parsed = parseInt(qtyPart.split('@')[0].replace(/,/g, ''), 10);
+    const qty = Number.isNaN(parsed) ? 0 : parsed;
     return { name: name.trim(), shares: qty };
   } else if (parts.length === 3) {
     // "Name:email:qty" or "Name:email:qty@pps"
     const [name, email, qtyPart] = parts;
-    const qty = parseInt(qtyPart.split('@')[0].replace(/,/g, ''));
+    const parsed = parseInt(qtyPart.split('@')[0].replace(/,/g, ''), 10);
+    const qty = Number.isNaN(parsed) ? 0 : parsed;
     return {
       name: name.trim(),
       email: email.trim(),
@@ -189,8 +219,13 @@ export function calculatePoolFromPercentage(founderShares: number, poolPct: numb
   // Pool = (P/100) * (F + Pool)
   // Pool * (1 - P/100) = F * (P/100)
   // Pool = F * (P/100) / (1 - P/100)
-  const ratio = poolPct / 100;
-  return Math.floor((founderShares * ratio) / (1 - ratio));
+  if (poolPct <= 0) return 0;
+  if (poolPct >= 100 - Number.EPSILON) {
+    // 100% pool is undefined (infinite); require explicit correction upstream
+    return 0;
+  }
+  // Algebraic simplification avoids subtractive cancellation from (1 - P/100)
+  return Math.floor((founderShares * poolPct) / (100 - poolPct));
 }
 
 export function buildModelFromWizard(result: WizardResult): FileModel {
@@ -241,7 +276,7 @@ export function buildModelFromWizard(result: WizardResult): FileModel {
         securityClassId: 'sc_common',
         stakeholderId,
         qty: founder.shares,
-        pps: result.parValue || 0,
+        pps: result.parValue ?? 0,
         date: model.company.formationDate!,
       });
       totalFounderShares += founder.shares;
