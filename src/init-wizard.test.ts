@@ -113,12 +113,40 @@ describe('init-wizard', () => {
       // pool = 10M * 0.15 / (1 - 0.15) = 1764705.88...
       expect(pool).toBe(1764705);
     });
+
+    describe('edge cases', () => {
+      it('returns 0 for zero percentage', () => {
+        expect(calculatePoolFromPercentage(1000000, 0)).toBe(0);
+      });
+
+      it('returns 0 for negative percentage', () => {
+        expect(calculatePoolFromPercentage(1000000, -10)).toBe(0);
+      });
+
+      it('returns 0 for 100% pool (prevents division by zero)', () => {
+        expect(calculatePoolFromPercentage(1000000, 100)).toBe(0);
+      });
+
+      it('returns 0 for percentage greater than 100%', () => {
+        expect(calculatePoolFromPercentage(1000000, 150)).toBe(0);
+      });
+
+      it('handles small positive percentages correctly', () => {
+        expect(calculatePoolFromPercentage(1000000, 0.1)).toBe(1001);
+      });
+
+      it('handles 99% pool correctly', () => {
+        // 99% pool: 1M * 0.99 / 0.01 = 99M (with floor rounding)
+        expect(calculatePoolFromPercentage(1000000, 99)).toBe(98999999);
+      });
+    });
   });
 
   describe('buildModelFromWizard', () => {
     it('builds C-Corp model correctly', () => {
       const result = {
         name: 'Test Corp',
+        formationDate: '2024-01-01',
         entityType: 'C_CORP' as EntityType,
         jurisdiction: 'DE',
         currency: 'USD',
@@ -164,6 +192,7 @@ describe('init-wizard', () => {
     it('builds LLC model correctly', () => {
       const result = {
         name: 'Test LLC',
+        formationDate: '2024-01-01',
         entityType: 'LLC' as EntityType,
         jurisdiction: 'CA',
         currency: 'USD',
@@ -192,6 +221,7 @@ describe('init-wizard', () => {
     it('calculates pool from percentage', () => {
       const result = {
         name: 'Test Corp',
+        formationDate: '2024-01-01',
         entityType: 'C_CORP' as EntityType,
         jurisdiction: 'DE',
         currency: 'USD',
@@ -211,6 +241,7 @@ describe('init-wizard', () => {
     it('handles no founders', () => {
       const result = {
         name: 'Empty Corp',
+        formationDate: '2024-01-01',
         entityType: 'C_CORP' as EntityType,
         jurisdiction: 'DE',
         currency: 'USD',
@@ -234,6 +265,7 @@ describe('init-wizard', () => {
     it('builds S-Corp model correctly', () => {
       const result = {
         name: 'Test S-Corp',
+        formationDate: '2024-01-01',
         entityType: 'S_CORP' as EntityType,
         jurisdiction: 'NY',
         currency: 'USD',
@@ -259,6 +291,7 @@ describe('init-wizard', () => {
     it('handles no pool for non-corp entities', () => {
       const result = {
         name: 'No Pool LLC',
+        formationDate: '2024-01-01',
         entityType: 'LLC' as EntityType,
         jurisdiction: 'TX',
         currency: 'USD',
@@ -278,6 +311,7 @@ describe('init-wizard', () => {
     it('handles founders with email and without email mixed', () => {
       const result = {
         name: 'Mixed Corp',
+        formationDate: '2024-01-01',
         entityType: 'C_CORP' as EntityType,
         jurisdiction: 'DE',
         currency: 'EUR',
@@ -309,6 +343,7 @@ describe('init-wizard', () => {
     it('handles both poolSize and poolPct with poolSize taking precedence', () => {
       const result = {
         name: 'Both Pool Corp',
+        formationDate: '2024-01-01',
         entityType: 'C_CORP' as EntityType,
         jurisdiction: 'DE',
         currency: 'USD',

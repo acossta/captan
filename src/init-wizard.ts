@@ -202,7 +202,12 @@ export function calculatePoolFromPercentage(founderShares: number, poolPct: numb
   // Pool = (P/100) * (F + Pool)
   // Pool * (1 - P/100) = F * (P/100)
   // Pool = F * (P/100) / (1 - P/100)
+  if (poolPct <= 0) return 0;
   const ratio = poolPct / 100;
+  if (ratio >= 1) {
+    // 100% pool is undefined (infinite); require explicit correction upstream
+    return 0;
+  }
   return Math.floor((founderShares * ratio) / (1 - ratio));
 }
 
