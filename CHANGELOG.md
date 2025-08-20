@@ -5,6 +5,28 @@ All notable changes to Captan will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2025-08-20
+
+### Added
+- Dynamic version display: `captan --version` and `captan -V` now read version from package.json
+- Comprehensive test coverage for CLI version and help commands
+- Support for decimal par values (e.g., 0.00001) in initialization wizard
+- Min/max constraints on number inputs for better user experience
+- New fractional pool percentage support (e.g., 12.5%)
+
+### Changed
+- Default par value updated from 0.0001 to 0.00001 (industry standard for 10M shares)
+- Default option pool percentage reduced from 20% to 10% (more typical for early-stage startups)
+- Improved pool calculation formula for numerical stability and floating-point precision
+- Enhanced wizard input validation with better error messages
+
+### Fixed
+- "Value must be a multiple of 1" error when entering decimal par values
+- Hardcoded version display (was showing 0.1.0 instead of actual version)
+- Pool calculation edge cases for percentages near 100%
+- NaN handling in founder share parsing
+- Test isolation issues in CLI integration tests
+
 ## [0.3.1] - 2025-08-19
 
 ### Added
