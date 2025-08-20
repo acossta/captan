@@ -110,10 +110,10 @@ export async function runInitWizard(): Promise<WizardResult> {
     } else {
       poolSize = await number({
         message: `Number of ${defaults.unitsName.toLowerCase()} for pool:`,
-        default: Math.floor(
-          (authorized && authorized > 0 ? authorized : defaults.authorized) *
-            (defaults.poolPct / 100)
-        ),
+        default: (() => {
+          const baseAuthorized = authorized && authorized > 0 ? authorized : defaults.authorized;
+          return Math.floor(baseAuthorized * (defaults.poolPct / 100));
+        })(),
         validate: (val) =>
           val === undefined || (typeof val === 'number' && val >= 0)
             ? true
@@ -151,7 +151,7 @@ export async function runInitWizard(): Promise<WizardResult> {
       if (founderShares && founderShares > 0) {
         founders.push({
           name: founderName,
-          email: founderEmail || undefined,
+          email: founderEmail?.trim() ? founderEmail.trim() : undefined,
           shares: founderShares,
         });
       }
@@ -189,12 +189,14 @@ export function parseFounderString(founderStr: string): FounderInput {
   if (parts.length === 2) {
     // "Name:qty" or "Name:qty@pps"
     const [name, qtyPart] = parts;
-    const qty = parseInt(qtyPart.split('@')[0].replace(/,/g, ''), 10);
+    const parsed = parseInt(qtyPart.split('@')[0].replace(/,/g, ''), 10);
+    const qty = Number.isNaN(parsed) ? 0 : parsed;
     return { name: name.trim(), shares: qty };
   } else if (parts.length === 3) {
     // "Name:email:qty" or "Name:email:qty@pps"
     const [name, email, qtyPart] = parts;
-    const qty = parseInt(qtyPart.split('@')[0].replace(/,/g, ''), 10);
+    const parsed = parseInt(qtyPart.split('@')[0].replace(/,/g, ''), 10);
+    const qty = Number.isNaN(parsed) ? 0 : parsed;
     return {
       name: name.trim(),
       email: email.trim(),
@@ -213,7 +215,7 @@ export function calculatePoolFromPercentage(founderShares: number, poolPct: numb
   // Pool * (1 - P/100) = F * (P/100)
   // Pool = F * (P/100) / (1 - P/100)
   if (poolPct <= 0) return 0;
-  if (poolPct >= 100) {
+  if (poolPct >= 100 - Number.EPSILON) {
     // 100% pool is undefined (infinite); require explicit correction upstream
     return 0;
   }
@@ -269,7 +271,7 @@ export function buildModelFromWizard(result: WizardResult): FileModel {
         securityClassId: 'sc_common',
         stakeholderId,
         qty: founder.shares,
-        pps: result.parValue || 0,
+        pps: result.parValue ?? 0,
         date: model.company.formationDate!,
       });
       totalFounderShares += founder.shares;

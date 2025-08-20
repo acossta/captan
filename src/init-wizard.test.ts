@@ -62,6 +62,26 @@ describe('init-wizard', () => {
       expect(result.shares).toBe(0);
     });
 
+    it('handles non-numeric quantity in simple format', () => {
+      const result = parseFounderString('Alice:abc');
+      expect(result.name).toBe('Alice');
+      expect(result.shares).toBe(0);
+    });
+
+    it('handles non-numeric quantity with email format', () => {
+      const result = parseFounderString('Bob:bob@example.com:xyz');
+      expect(result.name).toBe('Bob');
+      expect(result.email).toBe('bob@example.com');
+      expect(result.shares).toBe(0);
+    });
+
+    it('handles non-numeric quantity with price', () => {
+      const result = parseFounderString('Charlie:charlie@test.com:abc@0.01');
+      expect(result.name).toBe('Charlie');
+      expect(result.email).toBe('charlie@test.com');
+      expect(result.shares).toBe(0);
+    });
+
     it('handles price in email format', () => {
       const result = parseFounderString('Price Test:test@example.com:1000000@0.001');
       expect(result.name).toBe('Price Test');
