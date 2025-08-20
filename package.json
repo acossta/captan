@@ -1,6 +1,6 @@
 {
   "name": "captan",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Captan — Command your ownership. A tiny, hackable CLI cap table tool.",
   "type": "module",
   "bin": {
