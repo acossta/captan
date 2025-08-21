@@ -44,6 +44,27 @@ captan --help
 
 > Requires Node.js 20+
 
+### Updating
+
+If you have captan installed globally:
+```bash
+# Check current version
+captan --version
+
+# Update to latest version
+npm install -g captan@latest
+
+# Verify update
+captan --version
+```
+
+If you're using npx, it always fetches the latest by default:
+```bash
+npx captan@latest --version
+```
+
+> 💡 **Note**: `npm update -g captan` doesn't work for global packages. You must use `npm install -g captan@latest` to update.
+
 ### One-minute flow
 
 ```bash
