@@ -293,4 +293,69 @@ describe('EquityService', () => {
       expect(issuances).toEqual([]);
     });
   });
+
+  describe('Edge Cases', () => {
+    describe('Pricing and Quantity Edge Cases', () => {
+      it('should handle very small decimal prices', () => {
+        const issuance = service.issueShares(commonId, aliceId, 1000, 0.000001, '2024-01-01');
+        expect(issuance.pps).toBe(0.000001);
+      });
+
+      it('should handle MAX_SAFE_INTEGER share quantities', () => {
+        const largeCommonId = securityService.addSecurityClass(
+          'COMMON',
+          'Large Common',
+          Number.MAX_SAFE_INTEGER
+        ).id;
+        const issuance = service.issueShares(
+          largeCommonId,
+          aliceId,
+          Number.MAX_SAFE_INTEGER - 1,
+          0.01,
+          '2024-01-01'
+        );
+        expect(issuance.qty).toBe(Number.MAX_SAFE_INTEGER - 1);
+      });
+
+      it('should reject zero quantities', () => {
+        expect(() => {
+          service.issueShares(commonId, aliceId, 0, 1.0, '2024-01-01');
+        }).toThrow();
+      });
+    });
+
+    describe('Date Edge Cases', () => {
+      it('should handle leap year dates', () => {
+        const issuance = service.issueShares(commonId, aliceId, 1000, 1.0, '2024-02-29');
+        expect(issuance.date).toBe('2024-02-29');
+      });
+
+      it('should handle year boundaries', () => {
+        const issuance1 = service.issueShares(commonId, aliceId, 1000, 1.0, '2023-12-31');
+        expect(issuance1.date).toBe('2023-12-31');
+
+        const issuance2 = service.issueShares(commonId, bobId, 1000, 1.0, '2024-01-01');
+        expect(issuance2.date).toBe('2024-01-01');
+      });
+    });
+
+    describe('Concurrent Operations', () => {
+      it('should handle multiple issuances to same stakeholder', () => {
+        const sc1 = securityService.addSecurityClass('COMMON', 'Common Class 2', 1000000).id;
+        const sc2 = securityService.addSecurityClass('PREF', 'Preferred', 1000000).id;
+
+        service.issueShares(sc1, aliceId, 1000, 1.0, '2024-01-01');
+        service.issueShares(sc2, aliceId, 2000, 2.0, '2024-01-02');
+        service.issueShares(sc1, aliceId, 3000, 1.5, '2024-01-03');
+
+        const stakeholderIssuances = service.getIssuancesByStakeholder(aliceId);
+        expect(stakeholderIssuances.length).toBe(3);
+
+        const commonShares = stakeholderIssuances
+          .filter((i) => i.securityClassId === sc1)
+          .reduce((sum, i) => sum + i.qty, 0);
+        expect(commonShares).toBe(4000);
+      });
+    });
+  });
 });

@@ -3,6 +3,40 @@ import { StakeholderService } from './stakeholder-service.js';
 import { SecurityService } from './security-service.js';
 import { SAFEService } from './safe-service.js';
 
+/**
+ * Escapes a value for safe CSV output
+ * - Wraps in quotes if contains comma, quote, or newline
+ * - Escapes quotes by doubling them
+ * - Prevents formula injection by prepending single quote
+ */
+function escapeCSVValue(value: string | number | undefined | null): string {
+  if (value === undefined || value === null) {
+    return '';
+  }
+
+  const str = String(value);
+
+  // Prevent formula injection - prepend single quote to formulas
+  if (str.length > 0 && ['=', '+', '-', '@', '\t', '\r'].includes(str[0])) {
+    return `"'${str.replace(/"/g, '""')}"`;
+  }
+
+  // Check if value needs escaping
+  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+    // Escape quotes by doubling them and wrap in quotes
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+
+  return str;
+}
+
+/**
+ * Formats a row of CSV data with proper escaping
+ */
+function formatCSVRow(values: (string | number | undefined | null)[]): string {
+  return values.map(escapeCSVValue).join(',');
+}
+
 export class ReportingService {
   private stakeholderService: StakeholderService;
   private securityService: SecurityService;
@@ -23,24 +57,35 @@ export class ReportingService {
   }
 
   exportCSV(includeOptions = true): string {
-    const lines: string[] = [
-      'stakeholder_name,stakeholder_id,type,security_class,quantity,price_per_share,date',
-    ];
+    const lines: string[] = [];
+
+    // Add header row with proper escaping
+    lines.push(
+      formatCSVRow([
+        'stakeholder_name',
+        'stakeholder_id',
+        'type',
+        'security_class',
+        'quantity',
+        'price_per_share',
+        'date',
+      ])
+    );
 
     for (const issuance of this.model.issuances) {
       const stakeholder = this.stakeholderService.getStakeholder(issuance.stakeholderId);
       const securityClass = this.securityService.getSecurityClass(issuance.securityClassId);
 
       lines.push(
-        [
+        formatCSVRow([
           stakeholder?.name ?? issuance.stakeholderId,
           issuance.stakeholderId,
           'ISSUANCE',
           securityClass?.label ?? issuance.securityClassId,
-          issuance.qty.toString(),
-          (issuance.pps ?? 0).toString(),
+          issuance.qty,
+          issuance.pps ?? 0,
           issuance.date,
-        ].join(',')
+        ])
       );
     }
 
@@ -49,15 +94,15 @@ export class ReportingService {
         const stakeholder = this.stakeholderService.getStakeholder(grant.stakeholderId);
 
         lines.push(
-          [
+          formatCSVRow([
             stakeholder?.name ?? grant.stakeholderId,
             grant.stakeholderId,
             'OPTION',
             'Option Grant',
-            grant.qty.toString(),
-            grant.exercise.toString(),
+            grant.qty,
+            grant.exercise,
             grant.grantDate,
-          ].join(',')
+          ])
         );
       }
     }
@@ -67,15 +112,15 @@ export class ReportingService {
       const stakeholder = this.stakeholderService.getStakeholder(safe.stakeholderId);
 
       lines.push(
-        [
+        formatCSVRow([
           stakeholder?.name ?? safe.stakeholderId,
           safe.stakeholderId,
           'SAFE',
           safe.note || 'SAFE',
-          safe.amount.toString(),
-          safe.cap?.toString() ?? '',
+          safe.amount,
+          safe.cap,
           safe.date,
-        ].join(',')
+        ])
       );
     }
 

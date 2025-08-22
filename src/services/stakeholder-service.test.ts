@@ -192,4 +192,41 @@ describe('StakeholderService', () => {
       );
     });
   });
+
+  describe('Edge Cases', () => {
+    describe('String Handling', () => {
+      it('should handle empty strings vs undefined', () => {
+        const sh1 = service.addStakeholder('Test1', 'person', undefined);
+        expect(sh1.email).toBeUndefined();
+
+        const sh2 = service.addStakeholder('Test2', 'person');
+        expect(sh2.email).toBeUndefined();
+
+        expect(() => {
+          service.addStakeholder('Test3', 'person', '');
+        }).toThrow();
+      });
+
+      it('should handle special characters in names', () => {
+        const sh1 = service.addStakeholder("O'Brien & Co.", 'entity');
+        expect(sh1.name).toBe("O'Brien & Co.");
+
+        const sh2 = service.addStakeholder('株式会社テスト', 'entity');
+        expect(sh2.name).toBe('株式会社テスト');
+
+        const sh3 = service.addStakeholder('Test 🚀 Company', 'entity');
+        expect(sh3.name).toBe('Test 🚀 Company');
+      });
+
+      it('should handle potentially malicious strings safely', () => {
+        const maliciousName = "'; DROP TABLE users; --";
+        const sh = service.addStakeholder(maliciousName, 'person');
+        expect(sh.name).toBe(maliciousName);
+
+        const xssAttempt = '<script>alert("XSS")</script>';
+        const sh2 = service.addStakeholder(xssAttempt, 'person');
+        expect(sh2.name).toBe(xssAttempt);
+      });
+    });
+  });
 });

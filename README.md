@@ -28,6 +28,97 @@ Keep ownership records simple and transparent with a single JSON file (`captable
 
 ---
 
+## 📖 Usage
+
+Captan uses a resource-oriented command structure.
+
+### Stakeholder Commands
+```bash
+captan stakeholder add --name "Alice" --email "alice@example.com" [--entity PERSON]
+captan stakeholder list [--format json]
+captan stakeholder show [id-or-email]
+captan stakeholder update [id-or-email] [--name "New Name"] [--email "new@example.com"]
+captan stakeholder delete [id-or-email] [--force]  # --force required if stakeholder has holdings
+```
+
+### Security Class Commands
+```bash
+captan security add --kind COMMON --label "Common Stock" [--authorized 10000000]
+captan security list [--format json]
+captan security show [id]
+captan security update [id] [--authorized 20000000]
+captan security delete [id] [--force]  # --force required if shares have been issued
+```
+
+### Issuance Commands
+```bash
+captan issuance add --stakeholder <id-or-email> --security <id> --qty 1000000
+captan issuance list [--stakeholder id-or-email] [--format json]
+captan issuance show [id]
+captan issuance update [id] [--qty 2000000]
+captan issuance delete [id] [--force]  # --force required to delete share ownership
+```
+
+### Option Grant Commands
+```bash
+captan grant add --stakeholder <id-or-email> --qty 100000 --exercise 0.10
+captan grant list [--stakeholder id-or-email] [--format json]
+captan grant show [id]
+captan grant update [id] [--vesting-start 2024-06-01]
+captan grant delete [id] [--force]  # --force required if options are vested
+```
+
+### SAFE Commands
+```bash
+captan safe add --stakeholder <id-or-email> --amount 100000 [--cap 5000000]
+captan safe list [--stakeholder id-or-email] [--format json]
+captan safe show [id]
+captan safe update [id] [--discount 20]
+captan safe delete [id] [--force]  # --force required to delete investments
+captan safe convert --pre-money 10000000 --pps 2.00 [--dry-run]
+```
+
+### Report Commands
+```bash
+captan report summary [--format json]
+captan report ownership [--date 2024-01-01]
+captan report stakeholder [id-or-email]
+captan report security [id]
+```
+
+### Export Commands
+```bash
+captan export csv [--output captable.csv]
+captan export json [--output captable.json]
+captan export pdf [--output captable.pdf]
+```
+
+### System Commands
+```bash
+captan init [--wizard] [--name "Company"] [--authorized 10000000]
+captan validate [--extended] [--file captable.json]
+captan schema [--output captable.schema.json]
+captan log [--action ISSUANCE_ADD] [--limit 10]
+captan version
+captan help [command]
+```
+
+---
+
+## ⚠️ Destructive Operations
+
+Some commands require the `--force` flag to prevent accidental data loss:
+
+- **`stakeholder delete`** - Requires `--force` if the stakeholder has any equity holdings
+- **`security delete`** - Requires `--force` if any shares have been issued from this class
+- **`issuance delete`** - Requires `--force` to confirm deletion of share ownership records
+- **`grant delete`** - Requires `--force` if any options have vested
+- **`safe delete`** - Requires `--force` to confirm deletion of investment records
+
+These safeguards help prevent accidental deletion of important ownership data.
+
+---
+
 ## 🚀 QuickStart
 
 ### Install
@@ -78,10 +169,10 @@ captan init \
   --pool-pct 20
 
 # 2. Grant options from the pool
-captan grant --holder sh_bob --qty 200000 --exercise 0.10
+captan grant add --stakeholder sh_bob --qty 200000 --exercise 0.10
 
 # 3. View your cap table
-captan chart
+captan report ownership
 
 # 4. Export to CSV
 captan export csv > captable.csv
@@ -107,18 +198,18 @@ captan init --wizard
 
 ```bash
 # Add a SAFE investment
-captan safe \
-  --holder sh_alice \
+captan safe add \
+  --stakeholder sh_alice \
   --amount 100000 \
   --cap 5000000 \
   --discount 20 \
   --note "YC SAFE"
 
 # List all SAFEs
-captan safes
+captan safe list
 
 # Convert SAFEs at Series A (permanent - SAFEs become shares)
-captan convert \
+captan safe convert \
   --pre-money 10000000 \
   --new-money 3000000 \
   --pps 2.00
@@ -223,34 +314,6 @@ $ captan validate --extended
 | **Consistency** | ❌ | ✅ Date ordering, pool usage |
 | **Warnings** | ❌ | ✅ Orphaned entities, missing terms |
 
-## 📖 Commands
-
-### Core Commands
-- `captan init` - Initialize a new cap table
-- `captan enlist stakeholder` - Add a stakeholder (person or entity)
-- `captan security:add` - Add a security class (COMMON, PREF, or OPTION_POOL)
-- `captan issue` - Issue shares to a stakeholder
-- `captan grant` - Grant options with vesting schedules
-- `captan safe` - Add a SAFE investment
-- `captan safes` - List all SAFEs
-- `captan convert` - Convert SAFEs to shares at a priced round (permanent)
-
-### Reporting Commands
-- `captan chart` - Display cap table with ownership percentages
-- `captan report stakeholder <id>` - Show stakeholder's holdings
-- `captan report security <id>` - Show security class utilization
-- `captan report summary` - Full cap table summary
-- `captan list stakeholders` - List all stakeholders
-- `captan list securities` - List all security classes
-
-### Data Commands
-- `captan export json` - Export complete data as JSON
-- `captan export csv` - Export holdings as CSV
-- `captan log` - View audit trail
-- `captan validate` - Validate captable.json for errors
-- `captan validate --extended` - Extended validation with business rules
-- `captan schema` - Generate/export JSON schema file
-
 ## Concepts
 
 ### Outstanding vs Fully Diluted
@@ -283,15 +346,15 @@ SAFEs (Simple Agreement for Future Equity) are placeholder investments that conv
 #### Example SAFE Lifecycle:
 ```bash
 # 1. Add SAFEs during seed stage
-captan safe --holder sh_angel --amount 50000 --cap 5000000 --discount 20
-captan safe --holder sh_vc --amount 150000 --cap 8000000
+captan safe add --stakeholder sh_angel --amount 50000 --cap 5000000 --discount 20
+captan safe add --stakeholder sh_vc --amount 150000 --cap 8000000
 
 # 2. Check outstanding SAFEs
-captan safes
+captan safe list
 # Shows: $200k in SAFEs outstanding
 
 # 3. PREVIEW conversion (no changes made) - NEW!
-captan convert --pre-money 10000000 --pps 2.00 --dry-run
+captan safe convert --pre-money 10000000 --pps 2.00 --dry-run
 
 # Output:
 # 🔄 SAFE Conversion Preview
@@ -311,7 +374,7 @@ captan convert --pre-money 10000000 --pps 2.00 --dry-run
 # Dilution to existing: 4.1%
 
 # 4. EXECUTE conversion (permanent)
-captan convert --pre-money 10000000 --pps 2.00
+captan safe convert --pre-money 10000000 --pps 2.00
 
 # Conversion calculation for sh_angel:
 # - Round price: $2.00
@@ -320,19 +383,19 @@ captan convert --pre-money 10000000 --pps 2.00
 # - Converts: $50k ÷ $1.60 = 31,250 shares
 
 # 5. SAFEs are now gone
-captan safes
+captan safe list
 # Shows: No SAFEs outstanding
 
-captan chart
+captan report ownership
 # Shows: sh_angel now owns shares, not a SAFE
 ```
 
 #### Simulating Different Conversion Scenarios:
 ```bash
 # Test different valuations without committing
-captan convert --pre-money 8000000 --pps 1.60 --dry-run
-captan convert --pre-money 12000000 --pps 2.40 --dry-run
-captan convert --pre-money 15000000 --pps 3.00 --dry-run
+captan safe convert --pre-money 8000000 --pps 1.60 --dry-run
+captan safe convert --pre-money 12000000 --pps 2.40 --dry-run
+captan safe convert --pre-money 15000000 --pps 3.00 --dry-run
 
 # Compare which pricing terms apply at different valuations
 # Higher valuations may trigger cap prices
@@ -354,29 +417,29 @@ All data lives in `captable.json` in your current directory:
 ### Custom Vesting Schedules
 ```bash
 # 3-year vest, 6-month cliff
-captan grant --holder sh_alice --qty 100000 --exercise 0.25 \
-  --months 36 --cliff 6
+captan grant add --stakeholder sh_alice --qty 100000 --exercise 0.25 \
+  --vesting-months 36 --cliff-months 6
 
 # Immediate vesting (no schedule)
-captan grant --holder sh_bob --qty 50000 --exercise 0.10 --no-vesting
+captan grant add --stakeholder sh_bob --qty 50000 --exercise 0.10 --no-vesting
 ```
 
 ### Multiple Security Classes
 ```bash
 # Add Series A Preferred
-captan security:add --kind PREF --label "Series A" --authorized 3000000 --par 0.001
+captan security add --kind PREFERRED --label "Series A" --authorized 3000000 --par 0.001
 
 # Issue preferred shares
-captan issue --security sc_xyz --holder sh_investor --qty 2000000 --pps 2.00
+captan issuance add --security sc_xyz --stakeholder sh_investor --qty 2000000 --pps 2.00
 ```
 
 ### Detailed Reports
 ```bash
 # JSON format for cap table (for integrations)
-captan chart --format json
+captan report ownership --format json
 
 # Filter audit log
-captan log --action ISSUE --limit 10
+captan log --action ISSUANCE_ADD --limit 10
 
 # Stakeholder detail report
 captan report stakeholder sh_alice

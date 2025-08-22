@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { FileModel, FileModelSchema, AuditEntry } from './model.js';
+import { getCurrentTimestamp } from './utils/date-utils.js';
 
 export function load(file = 'captable.json'): FileModel {
   if (!fs.existsSync(file)) {
@@ -20,7 +21,7 @@ export function save(model: FileModel, file = 'captable.json'): void {
 
 export function audit(model: FileModel, action: string, data: any, by = 'cli'): void {
   const entry: AuditEntry = {
-    ts: new Date().toISOString(),
+    ts: getCurrentTimestamp(),
     by,
     action,
     data,
