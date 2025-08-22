@@ -5,6 +5,33 @@ All notable changes to Captan will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-08-22
+
+### Added
+- Complete CLI redesign to resource-oriented architecture
+- Comprehensive test coverage with 886 passing tests
+- Email-based stakeholder resolution alongside ID lookup
+- Intelligent identifier resolution with fuzzy matching suggestions
+- Performance testing for large-scale cap tables (50,000+ stakeholders)
+- Timezone-consistent date handling across all operations
+- Edge case tests for boundary conditions
+- Debug performance logging with DEBUG_PERF environment variable
+
+### Changed
+- **BREAKING**: Reorganized CLI commands to follow resource-verb pattern (e.g., `captan stakeholder add` instead of `captan add-stakeholder`)
+- Improved type safety by replacing `any` with `unknown` in error handlers
+- Enhanced error messages with actionable suggestions
+- Locked number formatting to 'en-US' locale for consistency
+- Made HandlerResult interface generic with unknown default
+- Improved test stability with seeded pseudo-random number generators
+
+### Fixed
+- Email comparison now case-insensitive with proper trimming
+- CSV export security (formula injection prevention)
+- Performance test flakiness in CI environments
+- Type safety issues throughout handler modules
+- Consistent error handling patterns across all commands
+
 ## [0.3.2] - 2025-08-20
 
 ### Added
