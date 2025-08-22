@@ -51,10 +51,11 @@ export async function handleInit(opts: {
           message: `✅ Cap table initialized for ${wizardResult.name}`,
           data: captable,
         };
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : String(error);
         return {
           success: false,
-          message: `❌ Wizard cancelled or failed: ${error.message}`,
+          message: `❌ Wizard cancelled or failed: ${msg}`,
         };
       }
     }

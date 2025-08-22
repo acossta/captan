@@ -56,18 +56,19 @@ export function handleReportSummary(opts: { format?: string }): HandlerResult {
     const totalSafes = captable.safes?.reduce((sum, s) => sum + s.amount, 0) || 0;
 
     output += `💰 Totals:\n`;
-    output += `  Issued Shares: ${totalShares.toLocaleString()}\n`;
-    output += `  Granted Options: ${totalOptions.toLocaleString()}\n`;
-    output += `  SAFE Investment: $${totalSafes.toLocaleString()}\n`;
+    output += `  Issued Shares: ${totalShares.toLocaleString('en-US')}\n`;
+    output += `  Granted Options: ${totalOptions.toLocaleString('en-US')}\n`;
+    output += `  SAFE Investment: $${totalSafes.toLocaleString('en-US')}\n`;
 
     return {
       success: true,
       message: output,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -120,9 +121,9 @@ export function handleReportOwnership(opts: { date?: string; format?: string }):
       .sort((a, b) => b.outstanding - a.outstanding)
       .forEach((o) => {
         const name = o.stakeholder.name.substring(0, 28).padEnd(28);
-        const shares = o.shares.toLocaleString().padStart(12);
-        const options = o.vestedOptions.toLocaleString().padStart(12);
-        const outstanding = o.outstanding.toLocaleString().padStart(14);
+        const shares = o.shares.toLocaleString('en-US').padStart(12);
+        const options = o.vestedOptions.toLocaleString('en-US').padStart(12);
+        const outstanding = o.outstanding.toLocaleString('en-US').padStart(14);
         const pct =
           totalOutstanding > 0
             ? ((o.outstanding / totalOutstanding) * 100).toFixed(2).padStart(7)
@@ -132,17 +133,18 @@ export function handleReportOwnership(opts: { date?: string; format?: string }):
       });
 
     output += '─'.repeat(80) + '\n';
-    output += `${'Total'.padEnd(28)}  ${' '.repeat(12)}  ${' '.repeat(12)}  ${totalOutstanding.toLocaleString().padStart(14)}  100.00%\n`;
+    output += `${'Total'.padEnd(28)}  ${' '.repeat(12)}  ${' '.repeat(12)}  ${totalOutstanding.toLocaleString('en-US').padStart(14)}  100.00%\n`;
 
     return {
       success: true,
       message: output,
       data: ownership,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -182,7 +184,7 @@ export function handleReportStakeholder(idOrEmail: string | undefined, _opts: an
       let totalShares = 0;
       holdings.issuances.forEach((iss) => {
         const security = captable.securityClasses.find((sc) => sc.id === iss.securityClassId);
-        output += `  • ${iss.date}: ${iss.qty.toLocaleString()} ${security?.label || 'shares'}`;
+        output += `  • ${iss.date}: ${iss.qty.toLocaleString('en-US')} ${security?.label || 'shares'}`;
         if (iss.pps) {
           // Fixed: pricePerShare -> pps
           output += ` at $${iss.pps}/share`;
@@ -190,7 +192,7 @@ export function handleReportStakeholder(idOrEmail: string | undefined, _opts: an
         output += '\n';
         totalShares += iss.qty;
       });
-      output += `  Total: ${totalShares.toLocaleString()} shares\n\n`;
+      output += `  Total: ${totalShares.toLocaleString('en-US')} shares\n\n`;
     }
 
     // Option grants
@@ -200,15 +202,15 @@ export function handleReportStakeholder(idOrEmail: string | undefined, _opts: an
       let totalVested = 0;
       holdings.grants.forEach((grant) => {
         const vested = grant.vesting ? helpers.calculateVestedOptions(grant, today) : grant.qty;
-        output += `  • ${grant.grantDate}: ${grant.qty.toLocaleString()} options at $${grant.exercise}`;
+        output += `  • ${grant.grantDate}: ${grant.qty.toLocaleString('en-US')} options at $${grant.exercise}`;
         if (grant.vesting) {
-          output += ` (${vested.toLocaleString()} vested)`;
+          output += ` (${vested.toLocaleString('en-US')} vested)`;
         }
         output += '\n';
         totalOptions += grant.qty;
         totalVested += vested;
       });
-      output += `  Total: ${totalOptions.toLocaleString()} granted, ${totalVested.toLocaleString()} vested\n\n`;
+      output += `  Total: ${totalOptions.toLocaleString('en-US')} granted, ${totalVested.toLocaleString('en-US')} vested\n\n`;
     }
 
     // SAFEs
@@ -216,9 +218,9 @@ export function handleReportStakeholder(idOrEmail: string | undefined, _opts: an
       output += `💰 SAFE Investments (${holdings.safes.length}):\n`;
       let totalInvestment = 0;
       holdings.safes.forEach((safe) => {
-        output += `  • ${safe.date}: $${safe.amount.toLocaleString()}`;
+        output += `  • ${safe.date}: $${safe.amount.toLocaleString('en-US')}`;
         const terms: string[] = [];
-        if (safe.cap) terms.push(`$${safe.cap.toLocaleString()} cap`);
+        if (safe.cap) terms.push(`$${safe.cap.toLocaleString('en-US')} cap`);
         if (safe.discount) terms.push(`${(safe.discount * 100).toFixed(0)}% discount`);
         if (terms.length > 0) {
           output += ` (${terms.join(', ')})`;
@@ -226,7 +228,7 @@ export function handleReportStakeholder(idOrEmail: string | undefined, _opts: an
         output += '\n';
         totalInvestment += safe.amount;
       });
-      output += `  Total: $${totalInvestment.toLocaleString()}\n`;
+      output += `  Total: $${totalInvestment.toLocaleString('en-US')}\n`;
     }
 
     if (
@@ -242,10 +244,11 @@ export function handleReportStakeholder(idOrEmail: string | undefined, _opts: an
       message: output,
       data: holdings,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -272,7 +275,7 @@ export function handleReportSecurity(id: string | undefined, _opts: any): Handle
     let output = `\n🏦 Security Class Report: ${security.label}\n\n`;
     output += `ID: ${security.id}\n`;
     output += `Type: ${security.kind}\n`;
-    output += `Authorized: ${security.authorized.toLocaleString()}\n`;
+    output += `Authorized: ${security.authorized.toLocaleString('en-US')}\n`;
     if (security.parValue !== undefined) {
       output += `Par Value: $${security.parValue}\n`;
     }
@@ -288,15 +291,15 @@ export function handleReportSecurity(id: string | undefined, _opts: any): Handle
         security.authorized > 0 ? ((totalGranted / security.authorized) * 100).toFixed(1) : '0.0';
 
       output += `📊 Pool Utilization:\n`;
-      output += `  Granted: ${totalGranted.toLocaleString()}\n`;
-      output += `  Remaining: ${remaining.toLocaleString()}\n`;
+      output += `  Granted: ${totalGranted.toLocaleString('en-US')}\n`;
+      output += `  Remaining: ${remaining.toLocaleString('en-US')}\n`;
       output += `  Utilization: ${utilization}%\n\n`;
 
       if (grants.length > 0) {
         output += `🎯 Grants (${grants.length}):\n`;
         grants.forEach((grant) => {
           const holder = captable.stakeholders.find((sh) => sh.id === grant.stakeholderId);
-          output += `  • ${holder?.name || 'Unknown'}: ${grant.qty.toLocaleString()} at $${grant.exercise}\n`;
+          output += `  • ${holder?.name || 'Unknown'}: ${grant.qty.toLocaleString('en-US')} at $${grant.exercise}\n`;
         });
       }
     } else {
@@ -308,15 +311,15 @@ export function handleReportSecurity(id: string | undefined, _opts: any): Handle
         security.authorized > 0 ? ((totalIssued / security.authorized) * 100).toFixed(1) : '0.0';
 
       output += `📊 Share Utilization:\n`;
-      output += `  Issued: ${totalIssued.toLocaleString()}\n`;
-      output += `  Remaining: ${remaining.toLocaleString()}\n`;
+      output += `  Issued: ${totalIssued.toLocaleString('en-US')}\n`;
+      output += `  Remaining: ${remaining.toLocaleString('en-US')}\n`;
       output += `  Utilization: ${utilization}%\n\n`;
 
       if (issuances.length > 0) {
         output += `📈 Issuances (${issuances.length}):\n`;
         issuances.forEach((iss) => {
           const holder = captable.stakeholders.find((sh) => sh.id === iss.stakeholderId);
-          output += `  • ${holder?.name || 'Unknown'}: ${iss.qty.toLocaleString()}`;
+          output += `  • ${holder?.name || 'Unknown'}: ${iss.qty.toLocaleString('en-US')}`;
           if (iss.pps) {
             // Fixed: pricePerShare -> pps
             output += ` at $${iss.pps}/share`;
@@ -331,10 +334,11 @@ export function handleReportSecurity(id: string | undefined, _opts: any): Handle
       message: output,
       data: { security },
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }

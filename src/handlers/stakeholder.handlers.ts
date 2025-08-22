@@ -58,10 +58,11 @@ export function handleStakeholderAdd(opts: {
       message: `✅ Added stakeholder ${formatStakeholderReference(stakeholder)}`,
       data: stakeholder,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -103,10 +104,11 @@ export function handleStakeholderList(opts: { format?: string }): HandlerResult 
       message: output,
       data: captable.stakeholders,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -153,7 +155,7 @@ export function handleStakeholderShow(idOrEmail: string | undefined, _opts: any)
       output += `📊 Share Issuances:\n`;
       holdings.issuances.forEach((iss) => {
         const security = captable.securityClasses.find((sc) => sc.id === iss.securityClassId);
-        output += `  • ${iss.qty.toLocaleString()} shares of ${security?.label || 'Unknown'}\n`;
+        output += `  • ${iss.qty.toLocaleString('en-US')} shares of ${security?.label || 'Unknown'}\n`;
       });
       output += `\n`;
     }
@@ -164,7 +166,7 @@ export function handleStakeholderShow(idOrEmail: string | undefined, _opts: any)
         const vested = grant.vesting
           ? helpers.calculateVestedOptions(grant, getCurrentDate())
           : grant.qty;
-        output += `  • ${grant.qty.toLocaleString()} options (${vested.toLocaleString()} vested) at $${grant.exercise}\n`;
+        output += `  • ${grant.qty.toLocaleString('en-US')} options (${vested.toLocaleString('en-US')} vested) at $${grant.exercise}\n`;
       });
       output += `\n`;
     }
@@ -173,9 +175,9 @@ export function handleStakeholderShow(idOrEmail: string | undefined, _opts: any)
       output += `💰 SAFEs:\n`;
       holdings.safes.forEach((safe) => {
         const terms: string[] = [];
-        if (safe.cap) terms.push(`$${safe.cap.toLocaleString()} cap`);
+        if (safe.cap) terms.push(`$${safe.cap.toLocaleString('en-US')} cap`);
         if (safe.discount) terms.push(`${(safe.discount * 100).toFixed(0)}% discount`);
-        output += `  • $${safe.amount.toLocaleString()} investment`;
+        output += `  • $${safe.amount.toLocaleString('en-US')} investment`;
         if (terms.length > 0) output += ` (${terms.join(', ')})`;
         output += `\n`;
       });
@@ -186,10 +188,11 @@ export function handleStakeholderShow(idOrEmail: string | undefined, _opts: any)
       message: output,
       data: { stakeholder, holdings },
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -269,10 +272,11 @@ export function handleStakeholderUpdate(
       message: `✅ Updated stakeholder ${formatStakeholderReference(stakeholder)}`,
       data: stakeholder,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -347,10 +351,11 @@ export function handleStakeholderDelete(
       success: true,
       message: `✅ Deleted stakeholder ${formatStakeholderReference(stakeholder)}`,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }

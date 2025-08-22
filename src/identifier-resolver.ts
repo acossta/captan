@@ -47,44 +47,47 @@ export function resolveStakeholder(identifier: string | undefined): ResolverResu
     };
   }
 
+  // Trim input to avoid whitespace issues
+  const input = identifier.trim();
+
   try {
     const captable = load('captable.json');
 
     // Determine lookup method based on identifier format
     let stakeholder: Stakeholder | undefined;
 
-    if (isEmail(identifier)) {
+    if (isEmail(input)) {
       // Lookup by email (case-insensitive)
-      const lowerIdentifier = identifier.toLowerCase();
-      stakeholder = captable.stakeholders.find((sh) => sh.email?.toLowerCase() === lowerIdentifier);
+      const lowerInput = input.toLowerCase();
+      stakeholder = captable.stakeholders.find((sh) => sh.email?.toLowerCase() === lowerInput);
 
       if (!stakeholder) {
         return {
           success: false,
-          error: `No stakeholder found with email: ${identifier}`,
+          error: `No stakeholder found with email: ${input}`,
         };
       }
-    } else if (isPrefixedId(identifier)) {
-      // Lookup by ID
-      stakeholder = captable.stakeholders.find((sh) => sh.id === identifier);
+    } else if (isPrefixedId(input)) {
+      // Lookup by ID (case-sensitive)
+      stakeholder = captable.stakeholders.find((sh) => sh.id === input);
 
       if (!stakeholder) {
         return {
           success: false,
-          error: `No stakeholder found with ID: ${identifier}`,
+          error: `No stakeholder found with ID: ${input}`,
         };
       }
     } else {
       // Try both methods as fallback (case-insensitive for email)
-      const lowerIdentifier = identifier.toLowerCase();
+      const lowerInput = input.toLowerCase();
       stakeholder = captable.stakeholders.find(
-        (sh) => sh.id === identifier || sh.email?.toLowerCase() === lowerIdentifier
+        (sh) => sh.id === input || sh.email?.toLowerCase() === lowerInput
       );
 
       if (!stakeholder) {
         return {
           success: false,
-          error: `No stakeholder found with identifier: ${identifier}`,
+          error: `No stakeholder found with identifier: ${input}`,
         };
       }
     }
