@@ -14,6 +14,7 @@ import {
   Vesting,
   vestedQty,
 } from '../model.js';
+import { getCurrentDate, getCurrentTimestamp } from '../utils/date-utils.js';
 
 type Captable = FileModel;
 
@@ -71,7 +72,7 @@ export function createIssuance(
   securityClassId: string,
   qty: number,
   pricePerShare?: number,
-  date: string = new Date().toISOString().slice(0, 10),
+  date: string = getCurrentDate(),
   certificateNumber?: string
 ): Issuance {
   return {
@@ -94,7 +95,7 @@ export function createOptionGrant(
   optionPoolId: string, // Not stored but used for validation
   qty: number,
   exercisePrice: number,
-  date: string = new Date().toISOString().slice(0, 10),
+  date: string = getCurrentDate(),
   vesting?: Vesting
 ): OptionGrant {
   // Note: optionPoolId is not part of the OptionGrant model
@@ -127,7 +128,7 @@ export function createSAFE(
   valuationCap?: number,
   discountPct?: number,
   isPostMoney: boolean = false,
-  date: string = new Date().toISOString().slice(0, 10),
+  date: string = getCurrentDate(),
   note?: string
 ): SAFE {
   return {
@@ -252,7 +253,7 @@ export function logAction(
   }
 
   captable.audit.push({
-    ts: new Date().toISOString(),
+    ts: getCurrentTimestamp(),
     by: 'captan-cli',
     action: entry.action,
     data: {

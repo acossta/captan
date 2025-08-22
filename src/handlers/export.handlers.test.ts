@@ -301,12 +301,16 @@ describe('Export Handlers', () => {
     });
 
     it('should fail when captable does not exist', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
 
       const result = handleExportCsv({});
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('❌ No captable.json found');
+      expect(result.message).toContain('❌ Error: File not found: captable.json');
     });
 
     it('should handle file write errors', () => {
@@ -401,12 +405,16 @@ describe('Export Handlers', () => {
     });
 
     it('should fail when captable does not exist', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
 
       const result = handleExportJson({});
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('❌ No captable.json found');
+      expect(result.message).toContain('❌ Error: File not found: captable.json');
     });
 
     it('should handle file write errors', () => {

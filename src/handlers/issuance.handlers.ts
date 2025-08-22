@@ -12,6 +12,7 @@
 import { resolveStakeholder, formatStakeholderReference } from '../identifier-resolver.js';
 import * as helpers from '../services/helpers.js';
 import { load, save } from '../store.js';
+import { getCurrentDate } from '../utils/date-utils.js';
 import type { HandlerResult } from './types.js';
 
 export function handleIssuanceAdd(opts: {
@@ -23,12 +24,6 @@ export function handleIssuanceAdd(opts: {
 }): HandlerResult {
   try {
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found. Run "captan init" first.',
-      };
-    }
 
     // Resolve stakeholder
     const stakeholderResult = resolveStakeholder(opts.stakeholder);
@@ -48,16 +43,38 @@ export function handleIssuanceAdd(opts: {
       };
     }
 
-    const qty = parseInt(opts.qty);
+    const qty = parseInt(opts.qty, 10);
     const pricePerShare = opts.pps ? parseFloat(opts.pps) : undefined;
-    const date = opts.date || new Date().toISOString().slice(0, 10);
+    const date = opts.date || getCurrentDate();
+
+    // Validate inputs
+    if (!Number.isFinite(qty) || qty <= 0) {
+      return {
+        success: false,
+        message: '❌ Invalid quantity. Please provide a positive integer.',
+      };
+    }
+
+    if (pricePerShare !== undefined && (!Number.isFinite(pricePerShare) || pricePerShare < 0)) {
+      return {
+        success: false,
+        message: '❌ Invalid price per share. Please provide a non-negative number.',
+      };
+    }
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return {
+        success: false,
+        message: '❌ Invalid date format. Please use YYYY-MM-DD.',
+      };
+    }
 
     // Check authorized limit
     const currentIssued = helpers.getIssuedShares(captable, security.id);
     if (currentIssued + qty > security.authorized) {
       return {
         success: false,
-        message: `❌ Issuance would exceed authorized shares. Available: ${(security.authorized - currentIssued).toLocaleString()}`,
+        message: `❌ Issuance would exceed authorized shares. Available: ${(security.authorized - currentIssued).toLocaleString('en-US')}`,
       };
     }
 
@@ -75,20 +92,21 @@ export function handleIssuanceAdd(opts: {
       action: 'ISSUANCE_ADD',
       entity: 'issuance',
       entityId: issuance.id,
-      details: `Issued ${qty.toLocaleString()} ${security.label} shares to ${stakeholderResult.stakeholder.name}`,
+      details: `Issued ${qty.toLocaleString('en-US')} ${security.label} shares to ${stakeholderResult.stakeholder.name}`,
     });
 
     save(captable, 'captable.json');
 
     return {
       success: true,
-      message: `✅ Issued ${qty.toLocaleString()} shares of ${security.label} to ${formatStakeholderReference(stakeholderResult.stakeholder)}`,
+      message: `✅ Issued ${qty.toLocaleString('en-US')} shares of ${security.label} to ${formatStakeholderReference(stakeholderResult.stakeholder)}`,
       data: issuance,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -96,12 +114,6 @@ export function handleIssuanceAdd(opts: {
 export function handleIssuanceList(opts: { stakeholder?: string; format?: string }): HandlerResult {
   try {
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found. Run "captan init" first.',
-      };
-    }
 
     let issuances = captable.issuances;
 
@@ -146,7 +158,7 @@ export function handleIssuanceList(opts: { stakeholder?: string; format?: string
       const date = iss.date.padEnd(10);
       const holder = (stakeholder?.name || 'Unknown').substring(0, 24).padEnd(24);
       const sec = (security?.label || 'Unknown').substring(0, 16).padEnd(16);
-      const qty = iss.qty.toLocaleString().padStart(12);
+      const qty = iss.qty.toLocaleString('en-US').padStart(12);
       const price = iss.pps ? `$${iss.pps}` : '-';
 
       output += `${id}  ${date}  ${holder}  ${sec}  ${qty}  ${price}\n`;
@@ -157,10 +169,11 @@ export function handleIssuanceList(opts: { stakeholder?: string; format?: string
       message: output,
       data: issuances,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -175,12 +188,6 @@ export function handleIssuanceShow(id: string | undefined, _opts: any): HandlerR
     }
 
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found.',
-      };
-    }
 
     const issuance = captable.issuances.find((i) => i.id === id);
     if (!issuance) {
@@ -198,11 +205,11 @@ export function handleIssuanceShow(id: string | undefined, _opts: any): HandlerR
     output += `Date:         ${issuance.date}\n`;
     output += `Stakeholder:  ${stakeholder?.name || 'Unknown'} (${issuance.stakeholderId})\n`;
     output += `Security:     ${security?.label || 'Unknown'} (${issuance.securityClassId})\n`;
-    output += `Quantity:     ${issuance.qty.toLocaleString()} shares\n`;
+    output += `Quantity:     ${issuance.qty.toLocaleString('en-US')} shares\n`;
 
     if (issuance.pps !== undefined) {
       output += `Price/Share:  $${issuance.pps}\n`;
-      output += `Total Value:  $${(issuance.qty * issuance.pps).toLocaleString()}\n`;
+      output += `Total Value:  $${(issuance.qty * issuance.pps).toLocaleString('en-US')}\n`;
     }
 
     if (issuance.cert) {
@@ -214,10 +221,11 @@ export function handleIssuanceShow(id: string | undefined, _opts: any): HandlerR
       message: output,
       data: issuance,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -235,12 +243,6 @@ export function handleIssuanceUpdate(
     }
 
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found.',
-      };
-    }
 
     const issuance = captable.issuances.find((i) => i.id === id);
     if (!issuance) {
@@ -254,7 +256,15 @@ export function handleIssuanceUpdate(
     const oldQty = issuance.qty;
 
     if (opts.qty !== undefined) {
-      const newQty = parseInt(opts.qty);
+      const newQty = parseInt(opts.qty, 10);
+
+      // Validate quantity
+      if (!Number.isFinite(newQty) || newQty <= 0) {
+        return {
+          success: false,
+          message: '❌ Invalid quantity. Please provide a positive integer.',
+        };
+      }
 
       // Check if the new quantity would exceed authorized shares
       const security = captable.securityClasses.find((sc) => sc.id === issuance.securityClassId);
@@ -265,17 +275,26 @@ export function handleIssuanceUpdate(
         if (newTotal > security.authorized) {
           return {
             success: false,
-            message: `❌ Update would exceed authorized shares. Available: ${(security.authorized - currentIssued + oldQty).toLocaleString()}`,
+            message: `❌ Update would exceed authorized shares. Available: ${(security.authorized - currentIssued + oldQty).toLocaleString('en-US')}`,
           };
         }
       }
 
       issuance.qty = newQty;
-      updates.push(`quantity to ${newQty.toLocaleString()}`);
+      updates.push(`quantity to ${newQty.toLocaleString('en-US')}`);
     }
 
     if (opts.pps !== undefined) {
       const newPps = parseFloat(opts.pps);
+
+      // Validate price per share
+      if (!Number.isFinite(newPps) || newPps < 0) {
+        return {
+          success: false,
+          message: '❌ Invalid price per share. Please provide a non-negative number.',
+        };
+      }
+
       issuance.pps = newPps;
       updates.push(`price per share to $${newPps}`);
     }
@@ -301,10 +320,11 @@ export function handleIssuanceUpdate(
       message: `✅ Updated issuance ${issuance.id}`,
       data: issuance,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -322,12 +342,6 @@ export function handleIssuanceDelete(
     }
 
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found.',
-      };
-    }
 
     const index = captable.issuances.findIndex((i) => i.id === id);
     if (index === -1) {
@@ -345,7 +359,7 @@ export function handleIssuanceDelete(
     if (!opts.force) {
       return {
         success: false,
-        message: `❌ Deleting an issuance removes ${issuance.qty.toLocaleString()} shares from ${stakeholder?.name || 'stakeholder'}. Use --force to confirm.`,
+        message: `❌ Deleting an issuance removes ${issuance.qty.toLocaleString('en-US')} shares from ${stakeholder?.name || 'stakeholder'}. Use --force to confirm.`,
       };
     }
 
@@ -355,7 +369,7 @@ export function handleIssuanceDelete(
       action: 'ISSUANCE_DELETE',
       entity: 'issuance',
       entityId: issuance.id,
-      details: `Deleted issuance of ${issuance.qty.toLocaleString()} ${security?.label || 'shares'} to ${stakeholder?.name || 'stakeholder'}`,
+      details: `Deleted issuance of ${issuance.qty.toLocaleString('en-US')} ${security?.label || 'shares'} to ${stakeholder?.name || 'stakeholder'}`,
     });
 
     save(captable, 'captable.json');
@@ -364,10 +378,11 @@ export function handleIssuanceDelete(
       success: true,
       message: `✅ Deleted issuance ${issuance.id}`,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }

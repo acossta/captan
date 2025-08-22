@@ -47,55 +47,58 @@ export function resolveStakeholder(identifier: string | undefined): ResolverResu
     };
   }
 
-  const captable = load('captable.json');
-  if (!captable) {
+  try {
+    const captable = load('captable.json');
+
+    // Determine lookup method based on identifier format
+    let stakeholder: Stakeholder | undefined;
+
+    if (isEmail(identifier)) {
+      // Lookup by email (case-insensitive)
+      const lowerIdentifier = identifier.toLowerCase();
+      stakeholder = captable.stakeholders.find((sh) => sh.email?.toLowerCase() === lowerIdentifier);
+
+      if (!stakeholder) {
+        return {
+          success: false,
+          error: `No stakeholder found with email: ${identifier}`,
+        };
+      }
+    } else if (isPrefixedId(identifier)) {
+      // Lookup by ID
+      stakeholder = captable.stakeholders.find((sh) => sh.id === identifier);
+
+      if (!stakeholder) {
+        return {
+          success: false,
+          error: `No stakeholder found with ID: ${identifier}`,
+        };
+      }
+    } else {
+      // Try both methods as fallback (case-insensitive for email)
+      const lowerIdentifier = identifier.toLowerCase();
+      stakeholder = captable.stakeholders.find(
+        (sh) => sh.id === identifier || sh.email?.toLowerCase() === lowerIdentifier
+      );
+
+      if (!stakeholder) {
+        return {
+          success: false,
+          error: `No stakeholder found with identifier: ${identifier}`,
+        };
+      }
+    }
+
+    return {
+      success: true,
+      stakeholder,
+    };
+  } catch (error) {
     return {
       success: false,
-      error: 'No captable.json found',
+      error: error instanceof Error ? error.message : 'Failed to load captable',
     };
   }
-
-  // Determine lookup method based on identifier format
-  let stakeholder: Stakeholder | undefined;
-
-  if (isEmail(identifier)) {
-    // Lookup by email
-    stakeholder = captable.stakeholders.find((sh) => sh.email === identifier);
-
-    if (!stakeholder) {
-      return {
-        success: false,
-        error: `No stakeholder found with email: ${identifier}`,
-      };
-    }
-  } else if (isPrefixedId(identifier)) {
-    // Lookup by ID
-    stakeholder = captable.stakeholders.find((sh) => sh.id === identifier);
-
-    if (!stakeholder) {
-      return {
-        success: false,
-        error: `No stakeholder found with ID: ${identifier}`,
-      };
-    }
-  } else {
-    // Try both methods as fallback
-    stakeholder = captable.stakeholders.find(
-      (sh) => sh.id === identifier || sh.email === identifier
-    );
-
-    if (!stakeholder) {
-      return {
-        success: false,
-        error: `No stakeholder found with identifier: ${identifier}`,
-      };
-    }
-  }
-
-  return {
-    success: true,
-    stakeholder,
-  };
 }
 
 /**
@@ -180,41 +183,42 @@ export function validateIdentifier(identifier: string): {
  * Useful for providing helpful error messages
  */
 export function suggestSimilarStakeholders(identifier: string, limit: number = 3): Stakeholder[] {
-  const captable = load('captable.json');
-  if (!captable) {
+  try {
+    const captable = load('captable.json');
+
+    const lowerIdentifier = identifier.toLowerCase();
+
+    // Score each stakeholder based on similarity
+    const scored = captable.stakeholders.map((sh) => {
+      let score = 0;
+
+      // Check ID similarity
+      if (sh.id.toLowerCase().includes(lowerIdentifier)) {
+        score += 2;
+      }
+
+      // Check email similarity
+      if (sh.email && sh.email.toLowerCase().includes(lowerIdentifier)) {
+        score += 2;
+      }
+
+      // Check name similarity
+      if (sh.name.toLowerCase().includes(lowerIdentifier)) {
+        score += 1;
+      }
+
+      return { stakeholder: sh, score };
+    });
+
+    // Sort by score and return top matches
+    return scored
+      .filter((s) => s.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map((s) => s.stakeholder);
+  } catch {
     return [];
   }
-
-  const lowerIdentifier = identifier.toLowerCase();
-
-  // Score each stakeholder based on similarity
-  const scored = captable.stakeholders.map((sh) => {
-    let score = 0;
-
-    // Check ID similarity
-    if (sh.id.toLowerCase().includes(lowerIdentifier)) {
-      score += 2;
-    }
-
-    // Check email similarity
-    if (sh.email && sh.email.toLowerCase().includes(lowerIdentifier)) {
-      score += 2;
-    }
-
-    // Check name similarity
-    if (sh.name.toLowerCase().includes(lowerIdentifier)) {
-      score += 1;
-    }
-
-    return { stakeholder: sh, score };
-  });
-
-  // Sort by score and return top matches
-  return scored
-    .filter((s) => s.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map((s) => s.stakeholder);
 }
 
 /**

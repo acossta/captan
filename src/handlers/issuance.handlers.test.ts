@@ -238,7 +238,11 @@ describe('Issuance Handlers', () => {
     });
 
     it('should fail when captable does not exist', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
 
       const result = handleIssuanceAdd({
         stakeholder: 'sh_founder',
@@ -247,7 +251,7 @@ describe('Issuance Handlers', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('❌ No captable.json found');
+      expect(result.message).toContain('❌ Error: File not found: captable.json');
     });
 
     it('should handle errors gracefully', () => {
@@ -344,12 +348,16 @@ describe('Issuance Handlers', () => {
     });
 
     it('should fail when captable does not exist', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
 
       const result = handleIssuanceList({});
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('❌ No captable.json found');
+      expect(result.message).toContain('❌ Error: File not found: captable.json');
     });
 
     it('should handle errors gracefully', () => {
@@ -430,12 +438,16 @@ describe('Issuance Handlers', () => {
     });
 
     it('should fail when captable does not exist', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
 
       const result = handleIssuanceShow('is_founder', {});
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('❌ No captable.json found');
+      expect(result.message).toContain('❌ Error: File not found: captable.json');
     });
   });
 
@@ -521,12 +533,16 @@ describe('Issuance Handlers', () => {
     });
 
     it('should fail when captable does not exist', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
 
       const result = handleIssuanceUpdate('is_founder', { qty: '1000000' });
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('❌ No captable.json found');
+      expect(result.message).toContain('❌ Error: File not found: captable.json');
     });
   });
 
@@ -574,12 +590,16 @@ describe('Issuance Handlers', () => {
     });
 
     it('should fail when captable does not exist', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
 
       const result = handleIssuanceDelete('is_founder', { force: true });
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('❌ No captable.json found');
+      expect(result.message).toContain('❌ Error: File not found: captable.json');
     });
 
     it('should handle errors gracefully', () => {

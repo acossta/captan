@@ -344,4 +344,19 @@ describe('SecurityService', () => {
       expect(classes1).toEqual(classes2);
     });
   });
+
+  describe('Edge Cases', () => {
+    describe('Numeric Boundary Tests', () => {
+      it('should handle MAX_SAFE_INTEGER for authorized shares', () => {
+        const sc = service.addSecurityClass('COMMON', 'Common', Number.MAX_SAFE_INTEGER);
+        expect(sc.authorized).toBe(Number.MAX_SAFE_INTEGER);
+      });
+
+      it('should reject negative authorized shares', () => {
+        expect(() => {
+          service.addSecurityClass('COMMON', 'Common', -1000);
+        }).toThrow();
+      });
+    });
+  });
 });

@@ -169,12 +169,14 @@ describe('Identifier Resolver', () => {
     });
 
     it('should fail when captable not found', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error('File not found: captable.json');
+      });
 
       const result = resolveStakeholder('alice@example.com');
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('No captable.json found');
+      expect(result.error).toBe('File not found: captable.json');
     });
   });
 

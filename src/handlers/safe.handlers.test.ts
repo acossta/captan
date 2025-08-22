@@ -274,7 +274,11 @@ describe('SAFE Handlers', () => {
     });
 
     it('should fail when captable does not exist', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
 
       const result = handleSafeAdd({
         stakeholder: 'sh_investor',
@@ -283,7 +287,7 @@ describe('SAFE Handlers', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('❌ No captable.json found');
+      expect(result.message).toContain('❌ Error: File not found: captable.json');
     });
 
     it('should handle errors gracefully', () => {
@@ -406,12 +410,16 @@ describe('SAFE Handlers', () => {
     });
 
     it('should fail when captable does not exist', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
 
       const result = handleSafeList({});
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('❌ No captable.json found');
+      expect(result.message).toContain('❌ Error: File not found: captable.json');
     });
 
     it('should handle errors gracefully', () => {
@@ -514,12 +522,16 @@ describe('SAFE Handlers', () => {
     });
 
     it('should fail when captable does not exist', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
 
       const result = handleSafeShow('safe_investor', {});
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('❌ No captable.json found');
+      expect(result.message).toContain('❌ Error: File not found: captable.json');
     });
   });
 
@@ -589,12 +601,16 @@ describe('SAFE Handlers', () => {
     });
 
     it('should fail when captable does not exist', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
 
       const result = handleSafeUpdate('safe_investor', { cap: '12000000' });
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('❌ No captable.json found');
+      expect(result.message).toContain('❌ Error: File not found: captable.json');
     });
   });
 
@@ -640,12 +656,16 @@ describe('SAFE Handlers', () => {
     });
 
     it('should fail when captable does not exist', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
 
       const result = handleSafeDelete('safe_investor', { force: true });
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('❌ No captable.json found');
+      expect(result.message).toContain('❌ Error: File not found: captable.json');
     });
 
     it('should handle errors gracefully', () => {
@@ -844,7 +864,11 @@ describe('SAFE Handlers', () => {
     });
 
     it('should fail when captable does not exist', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
 
       const result = handleSafeConvert({
         preMoney: '5000000',
@@ -852,7 +876,7 @@ describe('SAFE Handlers', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('❌ No captable.json found');
+      expect(result.message).toContain('❌ Error: File not found: captable.json');
     });
 
     it('should handle errors gracefully', () => {

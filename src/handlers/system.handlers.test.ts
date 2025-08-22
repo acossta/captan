@@ -427,21 +427,29 @@ describe('System Handlers', () => {
     });
 
     it('should fail when file not found', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
 
       const result = handleValidate({});
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('❌ No captable.json found');
+      expect(result.message).toContain('❌ Error: File not found: captable.json');
     });
 
     it('should fail when custom file not found', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation((filename) => {
+        throw new Error(
+          `File not found: ${filename}. Run 'captan init' to create a new cap table.`
+        );
+      });
 
       const result = handleValidate({ file: 'missing.json' });
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('❌ No missing.json found');
+      expect(result.message).toContain('❌ Error: File not found: missing.json');
     });
 
     it('should handle errors gracefully', () => {
@@ -608,12 +616,16 @@ describe('System Handlers', () => {
     });
 
     it('should fail when captable not found', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
 
       const result = handleLog({});
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('❌ No captable.json found');
+      expect(result.message).toContain('❌ Error: File not found: captable.json');
     });
 
     it('should handle errors gracefully', () => {

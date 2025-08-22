@@ -16,6 +16,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
 import { FileModelSchema, type FileModel } from '../model.js';
 import { randomUUID } from 'node:crypto';
 import * as fs from 'fs';
+import { getCurrentDate } from '../utils/date-utils.js';
 import type { HandlerResult } from './types.js';
 
 export async function handleInit(opts: {
@@ -74,10 +75,42 @@ export async function handleInit(opts: {
       };
     }
 
-    const authorized = parseInt(opts.authorized || '10000000');
+    const authorized = parseInt(opts.authorized || '10000000', 10);
     const parValue = parseFloat(opts.par || '0.00001');
     const poolPct = parseFloat(opts.poolPct || '10');
-    const date = opts.date || new Date().toISOString().slice(0, 10);
+    const date = opts.date || getCurrentDate();
+
+    // Validate authorized shares
+    if (!Number.isFinite(authorized) || authorized <= 0) {
+      return {
+        success: false,
+        message: '❌ Invalid authorized shares. Please provide a positive integer.',
+      };
+    }
+
+    // Validate par value
+    if (!Number.isFinite(parValue) || parValue < 0) {
+      return {
+        success: false,
+        message: '❌ Invalid par value. Please provide a non-negative number.',
+      };
+    }
+
+    // Validate pool percentage
+    if (!Number.isFinite(poolPct) || poolPct < 0 || poolPct > 100) {
+      return {
+        success: false,
+        message: '❌ Invalid pool percentage. Please provide a number between 0 and 100.',
+      };
+    }
+
+    // Validate date format
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return {
+        success: false,
+        message: '❌ Invalid date format. Please use YYYY-MM-DD.',
+      };
+    }
 
     // Create cap table structure
     const captable: FileModel = {
@@ -122,7 +155,15 @@ export async function handleInit(opts: {
         }
 
         const [name, email, sharesStr] = parts;
-        const shares = parseInt(sharesStr || '0');
+        const shares = parseInt(sharesStr || '0', 10);
+
+        // Validate shares
+        if (!Number.isFinite(shares) || shares < 0) {
+          return {
+            success: false,
+            message: `❌ Invalid shares for founder ${name}. Please provide a non-negative integer.`,
+          };
+        }
 
         // Create stakeholder
         const stakeholder = helpers.createStakeholder(name, email, 'PERSON');
@@ -158,10 +199,11 @@ export async function handleInit(opts: {
       message: `✅ Initialized cap table for ${opts.name}`,
       data: captable,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -170,13 +212,6 @@ export function handleValidate(opts: { extended?: boolean; file?: string }): Han
   try {
     const filename = opts.file || 'captable.json';
     const captable = load(filename);
-
-    if (!captable) {
-      return {
-        success: false,
-        message: `❌ No ${filename} found.`,
-      };
-    }
 
     // Basic schema validation
     const schemaResult = validateCaptable(captable);
@@ -218,10 +253,11 @@ export function handleValidate(opts: { extended?: boolean; file?: string }): Han
       message: `✅ Validation passed. ${stats.stakeholders} stakeholders, ${stats.securities} securities, ${stats.issuances} issuances`,
       data: stats,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -244,10 +280,11 @@ export function handleSchema(opts: { output?: string }): HandlerResult {
         data: schema,
       };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -255,12 +292,6 @@ export function handleSchema(opts: { output?: string }): HandlerResult {
 export function handleLog(opts: { action?: string; limit?: string }): HandlerResult {
   try {
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found.',
-      };
-    }
 
     let logs = captable.audit || [];
 
@@ -270,7 +301,16 @@ export function handleLog(opts: { action?: string; limit?: string }): HandlerRes
     }
 
     // Limit results
-    const limit = parseInt(opts.limit || '20');
+    const limit = parseInt(opts.limit || '20', 10);
+
+    // Validate limit
+    if (!Number.isFinite(limit) || limit <= 0) {
+      return {
+        success: false,
+        message: '❌ Invalid limit. Please provide a positive integer.',
+      };
+    }
+
     logs = logs.slice(-limit);
 
     if (logs.length === 0) {
@@ -283,7 +323,7 @@ export function handleLog(opts: { action?: string; limit?: string }): HandlerRes
     let output = `\n📝 Audit Log (last ${logs.length} entries)\n\n`;
 
     logs.reverse().forEach((log: any) => {
-      const timestamp = new Date(log.ts).toLocaleString();
+      const timestamp = new Date(log.ts).toLocaleString('en-US');
       output += `[${timestamp}] ${log.action} - ${log.data?.details || ''}\n`;
     });
 
@@ -292,10 +332,11 @@ export function handleLog(opts: { action?: string; limit?: string }): HandlerRes
       message: output,
       data: logs,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }

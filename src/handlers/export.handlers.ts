@@ -9,21 +9,63 @@
 
 import * as helpers from '../services/helpers.js';
 import { load } from '../store.js';
+import { getCurrentDate } from '../utils/date-utils.js';
 import * as fs from 'fs';
 import type { HandlerResult } from './types.js';
+
+/**
+ * Escapes a value for safe CSV output
+ * - Wraps in quotes if contains comma, quote, or newline
+ * - Escapes quotes by doubling them
+ * - Prevents formula injection by prepending single quote
+ */
+function escapeCSVValue(value: string | number | undefined | null): string {
+  if (value === undefined || value === null) {
+    return '';
+  }
+
+  const str = String(value);
+
+  // Prevent formula injection - prepend single quote to formulas
+  if (str.length > 0 && ['=', '+', '-', '@', '\t', '\r'].includes(str[0])) {
+    return `"'${str.replace(/"/g, '""')}"`;
+  }
+
+  // Check if value needs escaping
+  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+    // Escape quotes by doubling them and wrap in quotes
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+
+  return str;
+}
+
+/**
+ * Formats a row of CSV data with proper escaping
+ */
+function formatCSVRow(values: (string | number | undefined | null)[]): string {
+  return values.map(escapeCSVValue).join(',');
+}
 
 export function handleExportCsv(opts: { output?: string; noOptions?: boolean }): HandlerResult {
   try {
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found. Run "captan init" first.',
-      };
-    }
 
     const rows: string[] = [];
-    rows.push('Name,Email,Type,Security Class,Quantity,Price Per Share,Date,Vested');
+
+    // Add header row with proper escaping
+    rows.push(
+      formatCSVRow([
+        'Name',
+        'Email',
+        'Type',
+        'Security Class',
+        'Quantity',
+        'Price Per Share',
+        'Date',
+        'Vested',
+      ])
+    );
 
     // Add share issuances
     captable.issuances?.forEach((iss) => {
@@ -31,38 +73,38 @@ export function handleExportCsv(opts: { output?: string; noOptions?: boolean }):
       const security = captable.securityClasses.find((sc) => sc.id === iss.securityClassId);
 
       rows.push(
-        [
-          holder?.name || '',
-          holder?.email || '',
+        formatCSVRow([
+          holder?.name,
+          holder?.email,
           'Shares',
-          security?.label || '',
-          iss.qty.toString(),
-          iss.pps?.toString() || '', // Fixed: pricePerShare -> pps
+          security?.label,
+          iss.qty,
+          iss.pps,
           iss.date,
-          iss.qty.toString(), // Shares are always "vested"
-        ].join(',')
+          iss.qty, // Shares are always "vested"
+        ])
       );
     });
 
     // Add option grants unless excluded
     if (!opts.noOptions) {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = getCurrentDate();
       captable.optionGrants?.forEach((grant) => {
         const holder = captable.stakeholders.find((sh) => sh.id === grant.stakeholderId);
         const pool = captable.securityClasses.find((sc) => sc.kind === 'OPTION_POOL');
         const vested = grant.vesting ? helpers.calculateVestedOptions(grant, today) : grant.qty;
 
         rows.push(
-          [
-            holder?.name || '',
-            holder?.email || '',
+          formatCSVRow([
+            holder?.name,
+            holder?.email,
             'Options',
             pool?.label || 'Option Pool',
-            grant.qty.toString(),
-            grant.exercise.toString(),
+            grant.qty,
+            grant.exercise,
             grant.grantDate,
-            vested.toString(),
-          ].join(',')
+            vested,
+          ])
         );
       });
     }
@@ -81,10 +123,11 @@ export function handleExportCsv(opts: { output?: string; noOptions?: boolean }):
         message: csv,
       };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -92,12 +135,6 @@ export function handleExportCsv(opts: { output?: string; noOptions?: boolean }):
 export function handleExportJson(opts: { output?: string; pretty?: boolean }): HandlerResult {
   try {
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found. Run "captan init" first.',
-      };
-    }
 
     const json = opts.pretty ? JSON.stringify(captable, null, 2) : JSON.stringify(captable);
 
@@ -114,10 +151,11 @@ export function handleExportJson(opts: { output?: string; pretty?: boolean }): H
         data: captable,
       };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }

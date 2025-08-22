@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 import {
   handleGrantAdd,
   handleGrantList,
@@ -7,6 +7,7 @@ import {
   handleGrantDelete,
 } from './grant.handlers.js';
 import type { FileModel, Stakeholder, SecurityClass, OptionGrant, Vesting } from '../model.js';
+import { setupFakeTimers, setupMockCleanup } from '../utils/test-utils.js';
 
 // Mock dependencies
 vi.mock('../store.js', () => ({
@@ -25,6 +26,11 @@ vi.mock('../identifier-resolver.js', () => ({
   formatStakeholderReference: vi.fn(),
 }));
 
+vi.mock('../utils/date-utils.js', () => ({
+  getCurrentDate: vi.fn(() => '2024-01-01'),
+  getCurrentTimestamp: vi.fn(() => '2024-01-01T00:00:00.000Z'),
+}));
+
 // Import mocked modules
 import { load, save } from '../store.js';
 import * as helpers from '../services/helpers.js';
@@ -39,6 +45,9 @@ const mockResolveStakeholder = resolveStakeholder as Mock;
 const mockFormatStakeholderReference = formatStakeholderReference as Mock;
 
 describe('Grant Handlers', () => {
+  // Set up test utilities
+  setupMockCleanup();
+
   const mockStakeholder: Stakeholder = {
     id: 'sh_employee',
     name: 'Employee',
@@ -303,7 +312,11 @@ describe('Grant Handlers', () => {
     });
 
     it('should fail when captable does not exist', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
 
       const result = handleGrantAdd({
         stakeholder: 'sh_employee',
@@ -312,7 +325,7 @@ describe('Grant Handlers', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('❌ No captable.json found');
+      expect(result.message).toContain('❌ Error: File not found: captable.json');
     });
 
     it('should handle errors gracefully', () => {
@@ -411,12 +424,16 @@ describe('Grant Handlers', () => {
     });
 
     it('should fail when captable does not exist', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
 
       const result = handleGrantList({});
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('❌ No captable.json found');
+      expect(result.message).toContain('❌ Error: File not found: captable.json');
     });
 
     it('should handle errors gracefully', () => {
@@ -491,12 +508,16 @@ describe('Grant Handlers', () => {
     });
 
     it('should fail when captable does not exist', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
 
       const result = handleGrantShow('og_employee', {});
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('❌ No captable.json found');
+      expect(result.message).toContain('❌ Error: File not found: captable.json');
     });
   });
 
@@ -584,12 +605,16 @@ describe('Grant Handlers', () => {
     });
 
     it('should fail when captable does not exist', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
 
       const result = handleGrantUpdate('og_employee', { exercise: '0.50' });
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('❌ No captable.json found');
+      expect(result.message).toContain('❌ Error: File not found: captable.json');
     });
   });
 
@@ -663,12 +688,16 @@ describe('Grant Handlers', () => {
     });
 
     it('should fail when captable does not exist', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
 
       const result = handleGrantDelete('og_employee', {});
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('❌ No captable.json found');
+      expect(result.message).toContain('❌ Error: File not found: captable.json');
     });
 
     it('should handle errors gracefully', () => {

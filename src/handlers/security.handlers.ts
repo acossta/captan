@@ -21,12 +21,6 @@ export function handleSecurityAdd(opts: {
 }): HandlerResult {
   try {
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found. Run "captan init" first.',
-      };
-    }
 
     const kind = opts.kind.toUpperCase();
     if (!['COMMON', 'PREFERRED', 'OPTION_POOL'].includes(kind)) {
@@ -36,8 +30,24 @@ export function handleSecurityAdd(opts: {
       };
     }
 
-    const authorized = parseInt(opts.authorized || '10000000');
+    const authorized = parseInt(opts.authorized || '10000000', 10);
     const par = opts.par ? parseFloat(opts.par) : undefined;
+
+    // Validate authorized shares
+    if (!Number.isFinite(authorized) || authorized <= 0) {
+      return {
+        success: false,
+        message: '❌ Invalid authorized shares. Please provide a positive integer.',
+      };
+    }
+
+    // Validate par value if provided
+    if (par !== undefined && (!Number.isFinite(par) || par < 0)) {
+      return {
+        success: false,
+        message: '❌ Invalid par value. Please provide a non-negative number.',
+      };
+    }
 
     const security = helpers.createSecurityClass(kind as any, opts.label, authorized, par);
 
@@ -47,7 +57,7 @@ export function handleSecurityAdd(opts: {
       action: 'SECURITY_ADD',
       entity: 'security',
       entityId: security.id,
-      details: `Added ${kind} security class: ${opts.label} (${authorized.toLocaleString()} authorized)`,
+      details: `Added ${kind} security class: ${opts.label} (${authorized.toLocaleString('en-US')} authorized)`,
     });
 
     save(captable, 'captable.json');
@@ -57,10 +67,11 @@ export function handleSecurityAdd(opts: {
       message: `✅ Added security class "${opts.label}" (${security.id})`,
       data: security,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -68,12 +79,6 @@ export function handleSecurityAdd(opts: {
 export function handleSecurityList(opts: { format?: string }): HandlerResult {
   try {
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found. Run "captan init" first.',
-      };
-    }
 
     if (opts.format === 'json') {
       return {
@@ -100,8 +105,8 @@ export function handleSecurityList(opts: { format?: string }): HandlerResult {
       const id = sc.id.padEnd(14);
       const type = sc.kind.padEnd(12);
       const label = sc.label.substring(0, 22).padEnd(22);
-      const auth = sc.authorized.toLocaleString().padStart(14);
-      const iss = issued.toLocaleString().padStart(14);
+      const auth = sc.authorized.toLocaleString('en-US').padStart(14);
+      const iss = issued.toLocaleString('en-US').padStart(14);
       output += `${id}  ${type}  ${label}  ${auth}  ${iss}\n`;
     }
 
@@ -110,10 +115,11 @@ export function handleSecurityList(opts: { format?: string }): HandlerResult {
       message: output,
       data: captable.securityClasses,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -128,12 +134,6 @@ export function handleSecurityShow(id: string | undefined, _opts: any): HandlerR
     }
 
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found.',
-      };
-    }
 
     const security = captable.securityClasses.find((sc) => sc.id === id);
     if (!security) {
@@ -152,9 +152,9 @@ export function handleSecurityShow(id: string | undefined, _opts: any): HandlerR
     output += `Label:      ${security.label}\n`;
     output += `ID:         ${security.id}\n`;
     output += `Type:       ${security.kind}\n`;
-    output += `Authorized: ${security.authorized.toLocaleString()}\n`;
-    output += `Issued:     ${issued.toLocaleString()}\n`;
-    output += `Available:  ${available.toLocaleString()}\n`;
+    output += `Authorized: ${security.authorized.toLocaleString('en-US')}\n`;
+    output += `Issued:     ${issued.toLocaleString('en-US')}\n`;
+    output += `Available:  ${available.toLocaleString('en-US')}\n`;
     output += `Utilization: ${utilization}%\n`;
 
     if (security.parValue !== undefined) {
@@ -167,7 +167,7 @@ export function handleSecurityShow(id: string | undefined, _opts: any): HandlerR
       output += `\n📊 Issuances:\n`;
       issuances.forEach((iss) => {
         const holder = captable.stakeholders.find((sh) => sh.id === iss.stakeholderId);
-        output += `  • ${iss.qty.toLocaleString()} shares to ${holder?.name || 'Unknown'}`;
+        output += `  • ${iss.qty.toLocaleString('en-US')} shares to ${holder?.name || 'Unknown'}`;
         if (iss.pps) {
           // Fixed: pricePerShare -> pps
           output += ` at $${iss.pps}/share`;
@@ -181,10 +181,11 @@ export function handleSecurityShow(id: string | undefined, _opts: any): HandlerR
       message: output,
       data: { security, issued, available },
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -202,12 +203,6 @@ export function handleSecurityUpdate(
     }
 
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found.',
-      };
-    }
 
     const security = captable.securityClasses.find((sc) => sc.id === id);
     if (!security) {
@@ -220,18 +215,27 @@ export function handleSecurityUpdate(
     const updates: string[] = [];
 
     if (opts.authorized !== undefined) {
-      const newAuthorized = parseInt(opts.authorized);
+      const newAuthorized = parseInt(opts.authorized, 10);
+
+      // Validate authorized shares
+      if (!Number.isFinite(newAuthorized) || newAuthorized <= 0) {
+        return {
+          success: false,
+          message: '❌ Invalid authorized shares. Please provide a positive integer.',
+        };
+      }
+
       const issued = helpers.getIssuedShares(captable, security.id);
 
       if (newAuthorized < issued) {
         return {
           success: false,
-          message: `❌ Cannot set authorized (${newAuthorized.toLocaleString()}) below issued (${issued.toLocaleString()})`,
+          message: `❌ Cannot set authorized (${newAuthorized.toLocaleString('en-US')}) below issued (${issued.toLocaleString('en-US')})`,
         };
       }
 
       security.authorized = newAuthorized;
-      updates.push(`authorized to ${newAuthorized.toLocaleString()}`);
+      updates.push(`authorized to ${newAuthorized.toLocaleString('en-US')}`);
     }
 
     if (opts.label) {
@@ -260,10 +264,11 @@ export function handleSecurityUpdate(
       message: `✅ Updated security class "${security.label}" (${security.id})`,
       data: security,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -281,12 +286,6 @@ export function handleSecurityDelete(
     }
 
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found.',
-      };
-    }
 
     const index = captable.securityClasses.findIndex((sc) => sc.id === id);
     if (index === -1) {
@@ -302,7 +301,7 @@ export function handleSecurityDelete(
     if (issued > 0 && !opts.force) {
       return {
         success: false,
-        message: `❌ Security class has ${issued.toLocaleString()} issued shares. Use --force to delete anyway.`,
+        message: `❌ Security class has ${issued.toLocaleString('en-US')} issued shares. Use --force to delete anyway.`,
       };
     }
 
@@ -337,10 +336,11 @@ export function handleSecurityDelete(
       success: true,
       message: `✅ Deleted security class "${security.label}" (${security.id})`,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }

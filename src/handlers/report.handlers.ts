@@ -11,17 +11,12 @@
 import { resolveStakeholder } from '../identifier-resolver.js';
 import * as helpers from '../services/helpers.js';
 import { load } from '../store.js';
+import { getCurrentDate } from '../utils/date-utils.js';
 import type { HandlerResult } from './types.js';
 
 export function handleReportSummary(opts: { format?: string }): HandlerResult {
   try {
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found. Run "captan init" first.',
-      };
-    }
 
     if (opts.format === 'json') {
       const summary = {
@@ -80,14 +75,8 @@ export function handleReportSummary(opts: { format?: string }): HandlerResult {
 export function handleReportOwnership(opts: { date?: string; format?: string }): HandlerResult {
   try {
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found. Run "captan init" first.',
-      };
-    }
 
-    const asOfDate = opts.date || new Date().toISOString().slice(0, 10);
+    const asOfDate = opts.date || getCurrentDate();
 
     // Calculate ownership for each stakeholder
     const ownership = captable.stakeholders
@@ -176,15 +165,9 @@ export function handleReportStakeholder(idOrEmail: string | undefined, _opts: an
     }
 
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found.',
-      };
-    }
 
     const holdings = helpers.getStakeholderHoldings(captable, result.stakeholder.id);
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getCurrentDate();
 
     let output = `\n📋 Stakeholder Report: ${result.stakeholder.name}\n\n`;
     output += `ID: ${result.stakeholder.id}\n`;
@@ -277,12 +260,6 @@ export function handleReportSecurity(id: string | undefined, _opts: any): Handle
     }
 
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found.',
-      };
-    }
 
     const security = captable.securityClasses.find((sc) => sc.id === id);
     if (!security) {

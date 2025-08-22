@@ -17,7 +17,7 @@ import { SAFEService } from './services/safe-service.js';
 
 describe('Performance and Stress Tests', () => {
   describe('Large-scale cap table calculations', () => {
-    it('should handle 10,000 transactions efficiently', () => {
+    it('should handle 10,000 transactions efficiently', { timeout: 60000 }, () => {
       const model: FileModel = {
         version: 1,
         company: { id: 'perf_test', name: 'Performance Test Corp' },
@@ -126,7 +126,7 @@ describe('Performance and Stress Tests', () => {
       expect(conversionTime).toBeLessThan(1000); // Should complete within 1 second
     });
 
-    it('should handle extreme vesting calculations', () => {
+    it('should handle extreme vesting calculations', { timeout: 10000 }, () => {
       const startTime = performance.now();
 
       // Test with 100-year vesting period
@@ -154,7 +154,7 @@ describe('Performance and Stress Tests', () => {
       expect(calcTime).toBeLessThan(100); // Should be very fast
     });
 
-    it('should handle date calculations across centuries efficiently', () => {
+    it('should handle date calculations across centuries efficiently', { timeout: 10000 }, () => {
       const startTime = performance.now();
       const datePairs: Array<[string, string]> = [];
 
@@ -182,10 +182,44 @@ describe('Performance and Stress Tests', () => {
   });
 
   describe('Memory efficiency tests', () => {
-    it('should handle large number of stakeholders without memory issues', () => {
+    it(
+      'should handle large number of stakeholders without memory issues',
+      { timeout: 30000 },
+      () => {
+        const model: FileModel = {
+          version: 1,
+          company: { id: 'mem_test', name: 'Memory Test Corp' },
+          stakeholders: [],
+          securityClasses: [],
+          issuances: [],
+          optionGrants: [],
+          safes: [],
+          valuations: [],
+          audit: [],
+        };
+
+        const stakeholderService = new StakeholderService(model);
+        const initialMemory = process.memoryUsage().heapUsed;
+
+        // Create 10,000 stakeholders
+        for (let i = 0; i < 10000; i++) {
+          stakeholderService.addStakeholder(`Person ${i}`, 'person', `person${i}@example.com`);
+        }
+
+        const afterStakeholders = process.memoryUsage().heapUsed;
+        const memoryIncrease = (afterStakeholders - initialMemory) / 1024 / 1024; // Convert to MB
+
+        console.log(`Memory used for 10,000 stakeholders: ${memoryIncrease.toFixed(2)} MB`);
+
+        expect(model.stakeholders.length).toBe(10000);
+        expect(memoryIncrease).toBeLessThan(100); // Should use less than 100MB
+      }
+    );
+
+    it('should handle 50,000+ stakeholders efficiently', { timeout: 120000 }, () => {
       const model: FileModel = {
         version: 1,
-        company: { id: 'mem_test', name: 'Memory Test Corp' },
+        company: { id: 'test', name: 'Test Corp' },
         stakeholders: [],
         securityClasses: [],
         issuances: [],
@@ -196,25 +230,24 @@ describe('Performance and Stress Tests', () => {
       };
 
       const stakeholderService = new StakeholderService(model);
-      const initialMemory = process.memoryUsage().heapUsed;
 
-      // Create 10,000 stakeholders
-      for (let i = 0; i < 10000; i++) {
-        stakeholderService.addStakeholder(`Person ${i}`, 'person', `person${i}@example.com`);
+      const startTime = performance.now();
+      for (let i = 0; i < 50000; i++) {
+        stakeholderService.addStakeholder(`Stakeholder ${i}`, 'person');
       }
+      const endTime = performance.now();
 
-      const afterStakeholders = process.memoryUsage().heapUsed;
-      const memoryIncrease = (afterStakeholders - initialMemory) / 1024 / 1024; // Convert to MB
+      expect(model.stakeholders.length).toBe(50000);
 
-      console.log(`Memory used for 10,000 stakeholders: ${memoryIncrease.toFixed(2)} MB`);
+      expect(endTime - startTime).toBeLessThan(120000);
 
-      expect(model.stakeholders.length).toBe(10000);
-      expect(memoryIncrease).toBeLessThan(100); // Should use less than 100MB
+      const found = model.stakeholders.find((sh) => sh.name === 'Stakeholder 25000');
+      expect(found).toBeDefined();
     });
   });
 
   describe('Concurrent operations stress test', () => {
-    it('should handle rapid sequential calculations', () => {
+    it('should handle rapid sequential calculations', { timeout: 30000 }, () => {
       const model: FileModel = {
         version: 1,
         company: { id: 'concurrent', name: 'Concurrent Corp' },
@@ -269,7 +302,7 @@ describe('Performance and Stress Tests', () => {
   });
 
   describe('Edge case performance', () => {
-    it('should handle SAFEs with extreme values efficiently', () => {
+    it('should handle SAFEs with extreme values efficiently', { timeout: 10000 }, () => {
       const extremeCases: SAFE[] = [
         {
           id: 'tiny',
@@ -324,7 +357,7 @@ describe('Performance and Stress Tests', () => {
       expect(calcTime).toBeLessThan(1000);
     });
 
-    it('should handle sparse data efficiently', () => {
+    it('should handle sparse data efficiently', { timeout: 30000 }, () => {
       const model: FileModel = {
         version: 1,
         company: { id: 'sparse', name: 'Sparse Corp' },

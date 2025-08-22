@@ -12,6 +12,7 @@
 import { resolveStakeholder, formatStakeholderReference } from '../identifier-resolver.js';
 import * as helpers from '../services/helpers.js';
 import { load, save } from '../store.js';
+import { getCurrentDate } from '../utils/date-utils.js';
 import type { HandlerResult } from './types.js';
 
 export function handleGrantAdd(opts: {
@@ -27,12 +28,6 @@ export function handleGrantAdd(opts: {
 }): HandlerResult {
   try {
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found. Run "captan init" first.',
-      };
-    }
 
     // Resolve stakeholder
     const stakeholderResult = resolveStakeholder(opts.stakeholder);
@@ -67,19 +62,74 @@ export function handleGrantAdd(opts: {
       }
     }
 
-    const qty = parseInt(opts.qty);
+    const qty = parseInt(opts.qty, 10);
     const exercisePrice = parseFloat(opts.exercise);
-    const date = opts.date || new Date().toISOString().slice(0, 10);
+    const date = opts.date || getCurrentDate();
+
+    // Validate inputs
+    if (!Number.isFinite(qty) || qty <= 0) {
+      return {
+        success: false,
+        message: '❌ Invalid quantity. Please provide a positive integer.',
+      };
+    }
+
+    if (!Number.isFinite(exercisePrice) || exercisePrice < 0) {
+      return {
+        success: false,
+        message: '❌ Invalid exercise price. Please provide a non-negative number.',
+      };
+    }
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return {
+        success: false,
+        message: '❌ Invalid date format. Please use YYYY-MM-DD.',
+      };
+    }
+
+    // Validate vesting parameters if provided
+    if (!opts.noVesting) {
+      if (opts.vestingMonths) {
+        const vestingMonths = parseInt(opts.vestingMonths, 10);
+        if (!Number.isFinite(vestingMonths) || vestingMonths <= 0) {
+          return {
+            success: false,
+            message: '❌ Invalid vesting months. Please provide a positive integer.',
+          };
+        }
+      }
+
+      if (opts.cliffMonths) {
+        const cliffMonths = parseInt(opts.cliffMonths, 10);
+        if (!Number.isFinite(cliffMonths) || cliffMonths < 0) {
+          return {
+            success: false,
+            message: '❌ Invalid cliff months. Please provide a non-negative integer.',
+          };
+        }
+      }
+
+      if (opts.vestingStart && !/^\d{4}-\d{2}-\d{2}$/.test(opts.vestingStart)) {
+        return {
+          success: false,
+          message: '❌ Invalid vesting start date format. Please use YYYY-MM-DD.',
+        };
+      }
+    }
 
     // Check pool availability
-    // Note: optionPoolId doesn't exist in the model, so we track all grants against the pool
+    // LIMITATION: Since optionPoolId is not stored in the OptionGrant model,
+    // we must count ALL grants against ALL pools. This means with multiple pools,
+    // the available count is conservative (may show less than actually available).
+    // TODO: Future enhancement - add poolId to OptionGrant model for accurate tracking
     const poolUsed = captable.optionGrants.reduce((sum, g) => sum + g.qty, 0);
     const poolAvailable = pool.authorized - poolUsed;
 
     if (qty > poolAvailable) {
       return {
         success: false,
-        message: `❌ Insufficient options in pool. Available: ${poolAvailable.toLocaleString()}`,
+        message: `❌ Insufficient options in pool. Available: ${poolAvailable.toLocaleString('en-US')}`,
       };
     }
 
@@ -93,8 +143,8 @@ export function handleGrantAdd(opts: {
         ? undefined
         : {
             start: opts.vestingStart || date,
-            monthsTotal: parseInt(opts.vestingMonths || '48'),
-            cliffMonths: parseInt(opts.cliffMonths || '12'),
+            monthsTotal: parseInt(opts.vestingMonths || '48', 10),
+            cliffMonths: parseInt(opts.cliffMonths || '12', 10),
           }
     );
 
@@ -104,20 +154,21 @@ export function handleGrantAdd(opts: {
       action: 'GRANT_ADD',
       entity: 'grant',
       entityId: grant.id,
-      details: `Granted ${qty.toLocaleString()} options to ${stakeholderResult.stakeholder.name} at $${exercisePrice}`,
+      details: `Granted ${qty.toLocaleString('en-US')} options to ${stakeholderResult.stakeholder.name} at $${exercisePrice}`,
     });
 
     save(captable, 'captable.json');
 
     return {
       success: true,
-      message: `✅ Granted ${qty.toLocaleString()} options to ${formatStakeholderReference(stakeholderResult.stakeholder)} at $${exercisePrice}/share`,
+      message: `✅ Granted ${qty.toLocaleString('en-US')} options to ${formatStakeholderReference(stakeholderResult.stakeholder)} at $${exercisePrice}/share`,
       data: grant,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -125,12 +176,6 @@ export function handleGrantAdd(opts: {
 export function handleGrantList(opts: { stakeholder?: string; format?: string }): HandlerResult {
   try {
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found. Run "captan init" first.',
-      };
-    }
 
     let grants = captable.optionGrants;
 
@@ -162,7 +207,7 @@ export function handleGrantList(opts: { stakeholder?: string; format?: string })
       };
     }
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getCurrentDate();
 
     let output = '🎯 Option Grants\n\n';
     output +=
@@ -176,9 +221,9 @@ export function handleGrantList(opts: { stakeholder?: string; format?: string })
       const id = grant.id.substring(0, 14).padEnd(14);
       const date = grant.grantDate.padEnd(10);
       const holder = (stakeholder?.name || 'Unknown').substring(0, 24).padEnd(24);
-      const qty = grant.qty.toLocaleString().padStart(12);
+      const qty = grant.qty.toLocaleString('en-US').padStart(12);
       const exercise = `$${grant.exercise}`.padStart(10);
-      const vest = vested.toLocaleString().padStart(10);
+      const vest = vested.toLocaleString('en-US').padStart(10);
 
       output += `${id}  ${date}  ${holder}  ${qty}  ${exercise}  ${vest}\n`;
     }
@@ -188,10 +233,11 @@ export function handleGrantList(opts: { stakeholder?: string; format?: string })
       message: output,
       data: grants,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -206,12 +252,6 @@ export function handleGrantShow(id: string | undefined, _opts: any): HandlerResu
     }
 
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found.',
-      };
-    }
 
     const grant = captable.optionGrants.find((g) => g.id === id);
     if (!grant) {
@@ -222,13 +262,13 @@ export function handleGrantShow(id: string | undefined, _opts: any): HandlerResu
     }
 
     const stakeholder = captable.stakeholders.find((sh) => sh.id === grant.stakeholderId);
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getCurrentDate();
 
     let output = `\n🎯 Option Grant Details\n\n`;
     output += `ID:              ${grant.id}\n`;
     output += `Grant Date:      ${grant.grantDate}\n`;
     output += `Stakeholder:     ${stakeholder?.name || 'Unknown'} (${grant.stakeholderId})\n`;
-    output += `Quantity:        ${grant.qty.toLocaleString()} options\n`;
+    output += `Quantity:        ${grant.qty.toLocaleString('en-US')} options\n`;
     output += `Exercise Price:  $${grant.exercise}\n`;
 
     if (grant.vesting) {
@@ -239,8 +279,8 @@ export function handleGrantShow(id: string | undefined, _opts: any): HandlerResu
 
       const vested = helpers.calculateVestedOptions(grant, today);
       const vestedPct = grant.qty > 0 ? ((vested / grant.qty) * 100).toFixed(1) : '0.0';
-      output += `  Vested:        ${vested.toLocaleString()} options (${vestedPct}%)\n`;
-      output += `  Unvested:      ${(grant.qty - vested).toLocaleString()} options\n`;
+      output += `  Vested:        ${vested.toLocaleString('en-US')} options (${vestedPct}%)\n`;
+      output += `  Unvested:      ${(grant.qty - vested).toLocaleString('en-US')} options\n`;
 
       // Calculate vesting milestones
       const vestingEnd = new Date(grant.vesting.start);
@@ -255,10 +295,11 @@ export function handleGrantShow(id: string | undefined, _opts: any): HandlerResu
       message: output,
       data: grant,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -276,12 +317,6 @@ export function handleGrantUpdate(
     }
 
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found.',
-      };
-    }
 
     const grant = captable.optionGrants.find((g) => g.id === id);
     if (!grant) {
@@ -294,12 +329,26 @@ export function handleGrantUpdate(
     const updates: string[] = [];
 
     if (opts.vestingStart && grant.vesting) {
+      // Validate date format
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(opts.vestingStart)) {
+        return {
+          success: false,
+          message: '❌ Invalid date format. Please use YYYY-MM-DD.',
+        };
+      }
       grant.vesting.start = opts.vestingStart;
       updates.push(`vesting start date to ${opts.vestingStart}`);
     }
 
     if (opts.exercise !== undefined) {
       const newExercise = parseFloat(opts.exercise);
+      // Validate exercise price
+      if (!Number.isFinite(newExercise) || newExercise < 0) {
+        return {
+          success: false,
+          message: '❌ Invalid exercise price. Please provide a non-negative number.',
+        };
+      }
       grant.exercise = newExercise;
       updates.push(`exercise price to $${newExercise}`);
     }
@@ -325,10 +374,11 @@ export function handleGrantUpdate(
       message: `✅ Updated grant ${grant.id}`,
       data: grant,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -346,12 +396,6 @@ export function handleGrantDelete(
     }
 
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found.',
-      };
-    }
 
     const index = captable.optionGrants.findIndex((g) => g.id === id);
     if (index === -1) {
@@ -363,7 +407,7 @@ export function handleGrantDelete(
 
     const grant = captable.optionGrants[index];
     const stakeholder = captable.stakeholders.find((sh) => sh.id === grant.stakeholderId);
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getCurrentDate();
 
     // Check if grant is partially vested
     if (grant.vesting && !opts.force) {
@@ -371,7 +415,7 @@ export function handleGrantDelete(
       if (vested > 0) {
         return {
           success: false,
-          message: `❌ Grant has ${vested.toLocaleString()} vested options. Use --force to delete anyway.`,
+          message: `❌ Grant has ${vested.toLocaleString('en-US')} vested options. Use --force to delete anyway.`,
         };
       }
     }
@@ -382,7 +426,7 @@ export function handleGrantDelete(
       action: 'GRANT_DELETE',
       entity: 'grant',
       entityId: grant.id,
-      details: `Deleted grant of ${grant.qty.toLocaleString()} options to ${stakeholder?.name || 'stakeholder'}`,
+      details: `Deleted grant of ${grant.qty.toLocaleString('en-US')} options to ${stakeholder?.name || 'stakeholder'}`,
     });
 
     save(captable, 'captable.json');
@@ -391,10 +435,11 @@ export function handleGrantDelete(
       success: true,
       message: `✅ Deleted grant ${grant.id}`,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }

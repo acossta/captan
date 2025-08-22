@@ -143,14 +143,18 @@ describe('Stakeholder Handlers', () => {
     });
 
     it('should fail when captable does not exist', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
 
       const result = handleStakeholderAdd({
         name: 'Test User',
       });
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('❌ No captable.json found');
+      expect(result.message).toContain('❌ Error: File not found: captable.json');
       expect(mockSave).not.toHaveBeenCalled();
     });
 
@@ -221,12 +225,16 @@ describe('Stakeholder Handlers', () => {
     });
 
     it('should fail when captable does not exist', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
 
       const result = handleStakeholderList({});
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('❌ No captable.json found');
+      expect(result.message).toContain('❌ Error: File not found: captable.json');
     });
 
     it('should handle errors gracefully', () => {
@@ -320,7 +328,11 @@ describe('Stakeholder Handlers', () => {
     });
 
     it('should fail when captable does not exist', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
       mockResolveStakeholder.mockReturnValue({
         success: false,
         error: 'No captable.json found',
@@ -441,7 +453,11 @@ describe('Stakeholder Handlers', () => {
     });
 
     it('should fail when captable does not exist', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
       mockResolveStakeholder.mockReturnValue({ success: false, error: 'No captable.json found' });
 
       const result = handleStakeholderUpdate('test', { name: 'Test' });
@@ -535,7 +551,11 @@ describe('Stakeholder Handlers', () => {
     });
 
     it('should fail when captable does not exist', () => {
-      mockLoad.mockReturnValue(null);
+      mockLoad.mockImplementation(() => {
+        throw new Error(
+          "File not found: captable.json. Run 'captan init' to create a new cap table."
+        );
+      });
       mockResolveStakeholder.mockReturnValue({ success: false, error: 'No captable.json found' });
 
       const result = handleStakeholderDelete('test', {});

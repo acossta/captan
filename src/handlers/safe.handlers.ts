@@ -13,6 +13,7 @@
 import { resolveStakeholder, formatStakeholderReference } from '../identifier-resolver.js';
 import * as helpers from '../services/helpers.js';
 import { load, save } from '../store.js';
+import { getCurrentDate } from '../utils/date-utils.js';
 import type { HandlerResult } from './types.js';
 
 export function handleSafeAdd(opts: {
@@ -26,12 +27,6 @@ export function handleSafeAdd(opts: {
 }): HandlerResult {
   try {
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found. Run "captan init" first.',
-      };
-    }
 
     // Resolve stakeholder
     const stakeholderResult = resolveStakeholder(opts.stakeholder);
@@ -46,7 +41,42 @@ export function handleSafeAdd(opts: {
     const valuationCap = opts.cap ? parseFloat(opts.cap) : undefined;
     const discountPct = opts.discount ? parseFloat(opts.discount) : undefined;
     const isPostMoney = opts.type?.toLowerCase() === 'post-money';
-    const date = opts.date || new Date().toISOString().slice(0, 10);
+    const date = opts.date || getCurrentDate();
+
+    // Validate amount
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return {
+        success: false,
+        message: '❌ Invalid amount. Please provide a positive number.',
+      };
+    }
+
+    // Validate valuation cap if provided
+    if (valuationCap !== undefined && (!Number.isFinite(valuationCap) || valuationCap <= 0)) {
+      return {
+        success: false,
+        message: '❌ Invalid valuation cap. Please provide a positive number.',
+      };
+    }
+
+    // Validate discount percentage if provided
+    if (
+      discountPct !== undefined &&
+      (!Number.isFinite(discountPct) || discountPct < 0 || discountPct > 100)
+    ) {
+      return {
+        success: false,
+        message: '❌ Invalid discount percentage. Please provide a number between 0 and 100.',
+      };
+    }
+
+    // Validate date format
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return {
+        success: false,
+        message: '❌ Invalid date format. Please use YYYY-MM-DD.',
+      };
+    }
 
     if (!valuationCap && !discountPct) {
       return {
@@ -68,7 +98,7 @@ export function handleSafeAdd(opts: {
     captable.safes.push(safe);
 
     const terms: string[] = [];
-    if (valuationCap) terms.push(`$${valuationCap.toLocaleString()} cap`);
+    if (valuationCap) terms.push(`$${valuationCap.toLocaleString('en-US')} cap`);
     if (discountPct) terms.push(`${discountPct}% discount`);
     const typeStr = isPostMoney ? 'post-money' : 'pre-money';
 
@@ -76,20 +106,21 @@ export function handleSafeAdd(opts: {
       action: 'SAFE_ADD',
       entity: 'safe',
       entityId: safe.id,
-      details: `Added $${amount.toLocaleString()} ${typeStr} SAFE for ${stakeholderResult.stakeholder.name} (${terms.join(', ')})`,
+      details: `Added $${amount.toLocaleString('en-US')} ${typeStr} SAFE for ${stakeholderResult.stakeholder.name} (${terms.join(', ')})`,
     });
 
     save(captable, 'captable.json');
 
     return {
       success: true,
-      message: `✅ Added $${amount.toLocaleString()} SAFE for ${formatStakeholderReference(stakeholderResult.stakeholder)} (${terms.join(', ')})`,
+      message: `✅ Added $${amount.toLocaleString('en-US')} SAFE for ${formatStakeholderReference(stakeholderResult.stakeholder)} (${terms.join(', ')})`,
       data: safe,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -97,12 +128,6 @@ export function handleSafeAdd(opts: {
 export function handleSafeList(opts: { stakeholder?: string; format?: string }): HandlerResult {
   try {
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found. Run "captan init" first.',
-      };
-    }
 
     let safes = captable.safes;
 
@@ -145,8 +170,8 @@ export function handleSafeList(opts: { stakeholder?: string; format?: string }):
       const id = safe.id.substring(0, 14).padEnd(14);
       const date = safe.date.padEnd(10);
       const investor = (stakeholder?.name || 'Unknown').substring(0, 24).padEnd(24);
-      const amount = `$${safe.amount.toLocaleString()}`.padStart(12);
-      const cap = safe.cap ? `$${safe.cap.toLocaleString()}`.padStart(12) : '-'.padStart(12);
+      const amount = `$${safe.amount.toLocaleString('en-US')}`.padStart(12);
+      const cap = safe.cap ? `$${safe.cap.toLocaleString('en-US')}`.padStart(12) : '-'.padStart(12);
       const discount = safe.discount
         ? `${(safe.discount * 100).toFixed(0)}%`.padStart(8)
         : '-'.padStart(8);
@@ -156,17 +181,18 @@ export function handleSafeList(opts: { stakeholder?: string; format?: string }):
     }
 
     const totalAmount = safes.reduce((sum, s) => sum + s.amount, 0);
-    output += `\nTotal SAFE investment: $${totalAmount.toLocaleString()}`;
+    output += `\nTotal SAFE investment: $${totalAmount.toLocaleString('en-US')}`;
 
     return {
       success: true,
       message: output,
       data: safes,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -181,12 +207,6 @@ export function handleSafeShow(id: string | undefined, _opts: any): HandlerResul
     }
 
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found.',
-      };
-    }
 
     const safe = captable.safes.find((s) => s.id === id);
     if (!safe) {
@@ -202,12 +222,12 @@ export function handleSafeShow(id: string | undefined, _opts: any): HandlerResul
     output += `ID:             ${safe.id}\n`;
     output += `Date:           ${safe.date}\n`;
     output += `Investor:       ${stakeholder?.name || 'Unknown'} (${safe.stakeholderId})\n`;
-    output += `Amount:         $${safe.amount.toLocaleString()}\n`;
+    output += `Amount:         $${safe.amount.toLocaleString('en-US')}\n`;
     output += `Type:           ${safe.type === 'post' ? 'Post-money' : 'Pre-money'}\n`;
 
     output += `\n📊 Terms:\n`;
     if (safe.cap) {
-      output += `  Valuation Cap:  $${safe.cap.toLocaleString()}\n`;
+      output += `  Valuation Cap:  $${safe.cap.toLocaleString('en-US')}\n`;
     }
     if (safe.discount) {
       output += `  Discount:       ${(safe.discount * 100).toFixed(1)}%\n`;
@@ -221,7 +241,7 @@ export function handleSafeShow(id: string | undefined, _opts: any): HandlerResul
     output += `\n🔄 Conversion Scenarios:\n`;
     if (safe.cap) {
       const sharesAtCap = Math.floor(safe.amount / (safe.cap / 10000000)); // Assuming 10M shares
-      output += `  At cap:         ~${sharesAtCap.toLocaleString()} shares\n`;
+      output += `  At cap:         ~${sharesAtCap.toLocaleString('en-US')} shares\n`;
     }
     if (safe.discount) {
       output += `  With discount:  Price reduced by ${(safe.discount * 100).toFixed(0)}%\n`;
@@ -232,10 +252,11 @@ export function handleSafeShow(id: string | undefined, _opts: any): HandlerResul
       message: output,
       data: safe,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -253,12 +274,6 @@ export function handleSafeUpdate(
     }
 
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found.',
-      };
-    }
 
     const safe = captable.safes.find((s) => s.id === id);
     if (!safe) {
@@ -272,12 +287,30 @@ export function handleSafeUpdate(
 
     if (opts.cap !== undefined) {
       const newCap = parseFloat(opts.cap);
+
+      // Validate valuation cap
+      if (!Number.isFinite(newCap) || newCap <= 0) {
+        return {
+          success: false,
+          message: '❌ Invalid valuation cap. Please provide a positive number.',
+        };
+      }
+
       safe.cap = newCap;
-      updates.push(`valuation cap to $${newCap.toLocaleString()}`);
+      updates.push(`valuation cap to $${newCap.toLocaleString('en-US')}`);
     }
 
     if (opts.discount !== undefined) {
       const discountPct = parseFloat(opts.discount);
+
+      // Validate discount percentage
+      if (!Number.isFinite(discountPct) || discountPct < 0 || discountPct > 100) {
+        return {
+          success: false,
+          message: '❌ Invalid discount percentage. Please provide a number between 0 and 100.',
+        };
+      }
+
       const discountDecimal = discountPct / 100; // Convert percentage to decimal
       safe.discount = discountDecimal;
       updates.push(`discount to ${discountPct}%`);
@@ -304,10 +337,11 @@ export function handleSafeUpdate(
       message: `✅ Updated SAFE ${safe.id}`,
       data: safe,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -322,12 +356,6 @@ export function handleSafeDelete(id: string | undefined, opts: { force?: boolean
     }
 
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found.',
-      };
-    }
 
     const index = captable.safes.findIndex((s) => s.id === id);
     if (index === -1) {
@@ -344,7 +372,7 @@ export function handleSafeDelete(id: string | undefined, opts: { force?: boolean
     if (!opts.force) {
       return {
         success: false,
-        message: `❌ This will delete a $${safe.amount.toLocaleString()} investment from ${stakeholder?.name || 'investor'}. Use --force to confirm.`,
+        message: `❌ This will delete a $${safe.amount.toLocaleString('en-US')} investment from ${stakeholder?.name || 'investor'}. Use --force to confirm.`,
       };
     }
 
@@ -354,7 +382,7 @@ export function handleSafeDelete(id: string | undefined, opts: { force?: boolean
       action: 'SAFE_DELETE',
       entity: 'safe',
       entityId: safe.id,
-      details: `Deleted $${safe.amount.toLocaleString()} SAFE from ${stakeholder?.name || 'investor'}`,
+      details: `Deleted $${safe.amount.toLocaleString('en-US')} SAFE from ${stakeholder?.name || 'investor'}`,
     });
 
     save(captable, 'captable.json');
@@ -363,10 +391,11 @@ export function handleSafeDelete(id: string | undefined, opts: { force?: boolean
       success: true,
       message: `✅ Deleted SAFE ${safe.id}`,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }
@@ -380,12 +409,6 @@ export function handleSafeConvert(opts: {
 }): HandlerResult {
   try {
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found. Run "captan init" first.',
-      };
-    }
 
     if (captable.safes.length === 0) {
       return {
@@ -397,7 +420,39 @@ export function handleSafeConvert(opts: {
     const preMoneyValuation = parseFloat(opts.preMoney);
     const pricePerShare = parseFloat(opts.pps);
     const newMoney = opts.newMoney ? parseFloat(opts.newMoney) : 0;
-    const date = opts.date || new Date().toISOString().slice(0, 10);
+    const date = opts.date || getCurrentDate();
+
+    // Validate pre-money valuation
+    if (!Number.isFinite(preMoneyValuation) || preMoneyValuation <= 0) {
+      return {
+        success: false,
+        message: '❌ Invalid pre-money valuation. Please provide a positive number.',
+      };
+    }
+
+    // Validate price per share
+    if (!Number.isFinite(pricePerShare) || pricePerShare <= 0) {
+      return {
+        success: false,
+        message: '❌ Invalid price per share. Please provide a positive number.',
+      };
+    }
+
+    // Validate new money if provided
+    if (newMoney !== 0 && (!Number.isFinite(newMoney) || newMoney < 0)) {
+      return {
+        success: false,
+        message: '❌ Invalid new money amount. Please provide a non-negative number.',
+      };
+    }
+
+    // Validate date format
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return {
+        success: false,
+        message: '❌ Invalid date format. Please use YYYY-MM-DD.',
+      };
+    }
 
     // Calculate conversions
     const conversions = helpers.calculateSAFEConversions(
@@ -409,10 +464,10 @@ export function handleSafeConvert(opts: {
     if (opts.dryRun) {
       // Preview mode
       let output = '🔄 SAFE Conversion Preview\n\n';
-      output += `Pre-money valuation: $${preMoneyValuation.toLocaleString()}\n`;
+      output += `Pre-money valuation: $${preMoneyValuation.toLocaleString('en-US')}\n`;
       output += `Price per share: $${pricePerShare}\n`;
       if (newMoney > 0) {
-        output += `New money raised: $${newMoney.toLocaleString()}\n`;
+        output += `New money raised: $${newMoney.toLocaleString('en-US')}\n`;
       }
       output += '\n';
 
@@ -422,8 +477,8 @@ export function handleSafeConvert(opts: {
           (sh) => sh.id === conversion.safe.stakeholderId
         );
         output += `${stakeholder?.name || 'Unknown'}:\n`;
-        output += `  Investment: $${conversion.safe.amount.toLocaleString()}\n`;
-        output += `  Shares: ${conversion.shares.toLocaleString()} at $${conversion.conversionPrice}/share`;
+        output += `  Investment: $${conversion.safe.amount.toLocaleString('en-US')}\n`;
+        output += `  Shares: ${conversion.shares.toLocaleString('en-US')} at $${conversion.conversionPrice}/share`;
 
         if (conversion.conversionReason === 'cap') {
           output += ' (cap)';
@@ -437,7 +492,7 @@ export function handleSafeConvert(opts: {
         totalShares += conversion.shares;
       }
 
-      output += `Total new shares: ${totalShares.toLocaleString()}\n`;
+      output += `Total new shares: ${totalShares.toLocaleString('en-US')}\n`;
 
       return {
         success: true,
@@ -474,7 +529,7 @@ export function handleSafeConvert(opts: {
       action: 'SAFE_CONVERT',
       entity: 'safe',
       entityId: 'all',
-      details: `Converted ${conversions.length} SAFEs at $${pricePerShare}/share (pre-money: $${preMoneyValuation.toLocaleString()})`,
+      details: `Converted ${conversions.length} SAFEs at $${pricePerShare}/share (pre-money: $${preMoneyValuation.toLocaleString('en-US')})`,
     });
 
     save(captable, 'captable.json');
@@ -482,13 +537,14 @@ export function handleSafeConvert(opts: {
     const totalShares = conversions.reduce((sum, c) => sum + c.shares, 0);
     return {
       success: true,
-      message: `✅ Converted ${conversions.length} SAFEs into ${totalShares.toLocaleString()} shares`,
+      message: `✅ Converted ${conversions.length} SAFEs into ${totalShares.toLocaleString('en-US')} shares`,
       data: conversions,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: `❌ Error: ${error.message}`,
+      message: `❌ Error: ${msg}`,
     };
   }
 }

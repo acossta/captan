@@ -38,7 +38,7 @@ captan stakeholder add --name "Alice" --email "alice@example.com" [--entity PERS
 captan stakeholder list [--format json]
 captan stakeholder show [id-or-email]
 captan stakeholder update [id-or-email] [--name "New Name"] [--email "new@example.com"]
-captan stakeholder delete [id-or-email]
+captan stakeholder delete [id-or-email] [--force]  # --force required if stakeholder has holdings
 ```
 
 ### Security Class Commands
@@ -47,7 +47,7 @@ captan security add --kind COMMON --label "Common Stock" [--authorized 10000000]
 captan security list [--format json]
 captan security show [id]
 captan security update [id] [--authorized 20000000]
-captan security delete [id]
+captan security delete [id] [--force]  # --force required if shares have been issued
 ```
 
 ### Issuance Commands
@@ -56,7 +56,7 @@ captan issuance add --stakeholder <id-or-email> --security <id> --qty 1000000
 captan issuance list [--stakeholder id-or-email] [--format json]
 captan issuance show [id]
 captan issuance update [id] [--qty 2000000]
-captan issuance delete [id]
+captan issuance delete [id] [--force]  # --force required to delete share ownership
 ```
 
 ### Option Grant Commands
@@ -65,7 +65,7 @@ captan grant add --stakeholder <id-or-email> --qty 100000 --exercise 0.10
 captan grant list [--stakeholder id-or-email] [--format json]
 captan grant show [id]
 captan grant update [id] [--vesting-start 2024-06-01]
-captan grant delete [id]
+captan grant delete [id] [--force]  # --force required if options are vested
 ```
 
 ### SAFE Commands
@@ -74,7 +74,7 @@ captan safe add --stakeholder <id-or-email> --amount 100000 [--cap 5000000]
 captan safe list [--stakeholder id-or-email] [--format json]
 captan safe show [id]
 captan safe update [id] [--discount 20]
-captan safe delete [id]
+captan safe delete [id] [--force]  # --force required to delete investments
 captan safe convert --pre-money 10000000 --pps 2.00 [--dry-run]
 ```
 
@@ -102,6 +102,20 @@ captan log [--action ISSUANCE_ADD] [--limit 10]
 captan version
 captan help [command]
 ```
+
+---
+
+## ⚠️ Destructive Operations
+
+Some commands require the `--force` flag to prevent accidental data loss:
+
+- **`stakeholder delete`** - Requires `--force` if the stakeholder has any equity holdings
+- **`security delete`** - Requires `--force` if any shares have been issued from this class
+- **`issuance delete`** - Requires `--force` to confirm deletion of share ownership records
+- **`grant delete`** - Requires `--force` if any options have vested
+- **`safe delete`** - Requires `--force` to confirm deletion of investment records
+
+These safeguards help prevent accidental deletion of important ownership data.
 
 ---
 

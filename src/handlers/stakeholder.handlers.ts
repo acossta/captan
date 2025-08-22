@@ -16,6 +16,7 @@ import {
 } from '../identifier-resolver.js';
 import * as helpers from '../services/helpers.js';
 import { load, save } from '../store.js';
+import { getCurrentDate } from '../utils/date-utils.js';
 import type { HandlerResult } from './types.js';
 
 export function handleStakeholderAdd(opts: {
@@ -25,16 +26,11 @@ export function handleStakeholderAdd(opts: {
 }): HandlerResult {
   try {
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found. Run "captan init" first.',
-      };
-    }
 
-    // Check for duplicate email
+    // Check for duplicate email (case-insensitive)
     if (opts.email) {
-      const existing = captable.stakeholders.find((sh) => sh.email === opts.email);
+      const lowerEmail = opts.email.toLowerCase();
+      const existing = captable.stakeholders.find((sh) => sh.email?.toLowerCase() === lowerEmail);
       if (existing) {
         return {
           success: false,
@@ -73,12 +69,6 @@ export function handleStakeholderAdd(opts: {
 export function handleStakeholderList(opts: { format?: string }): HandlerResult {
   try {
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found. Run "captan init" first.',
-      };
-    }
 
     if (opts.format === 'json') {
       return {
@@ -148,12 +138,6 @@ export function handleStakeholderShow(idOrEmail: string | undefined, _opts: any)
 
     const stakeholder = result.stakeholder;
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found.',
-      };
-    }
 
     // Get holdings
     const holdings = helpers.getStakeholderHoldings(captable, stakeholder.id);
@@ -178,7 +162,7 @@ export function handleStakeholderShow(idOrEmail: string | undefined, _opts: any)
       output += `🎯 Option Grants:\n`;
       holdings.grants.forEach((grant) => {
         const vested = grant.vesting
-          ? helpers.calculateVestedOptions(grant, new Date().toISOString().slice(0, 10))
+          ? helpers.calculateVestedOptions(grant, getCurrentDate())
           : grant.qty;
         output += `  • ${grant.qty.toLocaleString()} options (${vested.toLocaleString()} vested) at $${grant.exercise}\n`;
       });
@@ -231,12 +215,6 @@ export function handleStakeholderUpdate(
     }
 
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found.',
-      };
-    }
 
     const stakeholder = captable.stakeholders.find((sh) => sh.id === result.stakeholder!.id);
     if (!stakeholder) {
@@ -320,12 +298,6 @@ export function handleStakeholderDelete(
     }
 
     const captable = load('captable.json');
-    if (!captable) {
-      return {
-        success: false,
-        message: '❌ No captable.json found.',
-      };
-    }
 
     const stakeholderId = result.stakeholder.id;
 
